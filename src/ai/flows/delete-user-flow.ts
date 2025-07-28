@@ -9,6 +9,14 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { auth as adminAuth, db as adminDb } from '@/lib/firebase-admin';
+import Stripe from 'stripe';
+
+const getStripeInstance = () => {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) throw new Error('A chave secreta do Stripe não está configurada.');
+    return new Stripe(secretKey, { apiVersion: '2024-04-10' });
+};
+
 
 // Helper function to delete all documents in a collection
 const deleteCollection = async (userId: string, collectionName: string) => {
@@ -28,22 +36,30 @@ const deleteCollection = async (userId: string, collectionName: string) => {
     await batch.commit();
 };
 
-const collectionsToDelete = ['transactions', 'fixedIncomes', 'extraIncomes', 'installments', 'budgets', 'fixedExpenses', 'creditCards', 'bills', 'dreams', 'userGamification', 'historicoPagamentos'];
+const collectionsToDelete = ['transactions', 'fixedIncomes', 'extraIncomes', 'installments', 'budgets', 'fixedExpenses', 'creditCards', 'bills', 'dreams', 'userGamification', 'historicoPagamentos', 'subscriptions'];
 
-const resetAccountDataAdmin = async (userId: string) => {
-    if (!userId) {
-        throw new Error("Usuário não autenticado.");
-    }
+const deleteFirestoreData = async (userId: string) => {
+    const deletePromises = collectionsToDelete.map(collectionName => deleteCollection(userId, collectionName));
+    await Promise.all(deletePromises);
+    // Finally, delete the main user document
+    await adminDb.collection('users').doc(userId).delete();
+};
 
+
+const deleteStripeCustomer = async (userId: string) => {
     try {
-        const deletePromises = collectionsToDelete.map(collectionName => deleteCollection(userId, collectionName));
-        await Promise.all(deletePromises);
-        // Also delete the main user document data, but not the doc itself
-        await adminDb.collection('users').doc(userId).set({}, { merge: false });
+        const userDoc = await adminDb.collection('users').doc(userId).get();
+        const userData = userDoc.data();
+        const stripeCustomerId = userData?.stripeCustomerId;
 
-    } catch(error) {
-        console.error("Erro ao zerar os dados da conta:", error);
-        throw new Error("Ocorreu um erro ao tentar zerar os dados da conta.");
+        if (stripeCustomerId) {
+            const stripe = getStripeInstance();
+            await stripe.customers.del(stripeCustomerId);
+            console.log(`[Flow:DeleteUser] Cliente Stripe ${stripeCustomerId} deletado.`);
+        }
+    } catch (error: any) {
+        // Log o erro, mas não impeça a exclusão do usuário do Firebase
+        console.error(`[Flow:DeleteUser] Erro ao deletar cliente Stripe para o usuário ${userId}:`, error.message);
     }
 };
 
@@ -75,10 +91,13 @@ const deleteUserAccountFlow = ai.defineFlow(
             throw new Error("O ID do usuário é obrigatório.");
         }
 
-        // Primeiro, deleta todos os dados associados no Firestore
-        await resetAccountDataAdmin(userId);
+        // Deleta o cliente no Stripe (se existir)
+        await deleteStripeCustomer(userId);
 
-        // Depois, deleta o usuário da Autenticação do Firebase
+        // Deleta todos os dados associados no Firestore
+        await deleteFirestoreData(userId);
+
+        // Deleta o usuário da Autenticação do Firebase
         await adminAuth.deleteUser(userId);
 
         return { success: true, message: 'Usuário e todos os dados foram deletados com sucesso.' };

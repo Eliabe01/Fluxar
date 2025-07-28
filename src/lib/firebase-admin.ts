@@ -19,6 +19,7 @@ function initializeFirebaseAdmin() {
   ) {
     console.log('🔐 Inicializando Firebase Admin com variáveis de ambiente...');
     try {
+      // O replace é crucial para formatar a chave privada corretamente quando lida do .env
       const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
       adminApp = initializeApp({
         credential: cert({
@@ -29,7 +30,7 @@ function initializeFirebaseAdmin() {
       });
       console.log('✅ Firebase Admin inicializado com sucesso via env vars!');
       return adminApp;
-    } catch (error) {
+    } catch (error: any) {
        console.error('❌ Erro crítico ao inicializar Firebase Admin com env vars:', error);
        throw new Error(`Falha na inicialização do Firebase com variáveis de ambiente: ${error.message}`);
     }
@@ -44,25 +45,25 @@ function initializeFirebaseAdmin() {
     });
     console.log('✅ Firebase Admin inicializado com arquivo local!');
     return adminApp;
-  } catch (fileError) {
-    console.error('❌ Erro ao carregar service-account.json:', fileError.message);
+  } catch (fileError: any) {
+    console.warn('ℹ️ Arquivo local service-account.json não encontrado ou inválido. Isso é esperado em produção.');
   }
   
   // TENTATIVA FINAL: Usar credenciais padrão da aplicação (para emuladores ou infraestrutura GCP)
   try {
-      console.log('ℹ️ Tentando usar Application Default Credentials...');
+      console.log('☁️ Tentando usar Application Default Credentials...');
       adminApp = initializeApp({
         credential: admin.credential.applicationDefault(),
       });
       console.log('✅ Firebase Admin inicializado com Application Default Credentials!');
       return adminApp;
-  } catch (defaultError) {
+  } catch (defaultError: any) {
       console.error('❌ Erro ao usar Application Default Credentials:', defaultError.message);
   }
 
   throw new Error(
     'Configuração do Firebase Admin não encontrada. ' +
-    'Configure as variáveis de ambiente (FIREBASE_PROJECT_ID, etc.) ou forneça um arquivo service-account.json.'
+    'Configure as variáveis de ambiente (FIREBASE_PROJECT_ID, etc.) ou forneça um arquivo service-account.json para desenvolvimento local.'
   );
 }
 
