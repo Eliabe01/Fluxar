@@ -1,0 +1,11 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "users",
+      "fieldPath": "subscription.current_period_end",
+      "order": "ASCENDING",
+      "queryScope": "COLLECTION"
+    }
+  ],
+  "fieldOverrides": []
+}
