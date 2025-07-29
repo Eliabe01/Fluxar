@@ -37,3 +37,4 @@ Seu projeto já está configurado para ser implantado no Firebase Hosting. Siga 
     A Firebase CLI irá construir seu projeto Next.js e implantá-lo no Firebase Hosting. O processo pode levar alguns minutos.
 
 Ao final, o terminal exibirá o URL onde seu aplicativo está no ar. Seu projeto já está conectado ao projeto do Firebase `app-de-gerenciamento-1560b` através do arquivo `.firebaserc`, então a CLI saberá exatamente para onde enviar o código.
+# Deploy fix
