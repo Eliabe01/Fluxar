@@ -78,6 +78,11 @@ export default function FixedIncomePage() {
       currency: "BRL",
     }).format(value);
   };
+  
+  const frequencyLabels: Record<string, string> = {
+    monthly: 'Mensal',
+    fortnightly: 'Quinzenal'
+  };
 
   return (
     <Card>
@@ -114,6 +119,7 @@ export default function FixedIncomePage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Descrição</TableHead>
+                  <TableHead>Frequência</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
@@ -122,6 +128,7 @@ export default function FixedIncomePage() {
                 {fixedIncomes.map((income) => (
                   <TableRow key={income.id}>
                     <TableCell className="font-medium">{income.description}</TableCell>
+                    <TableCell>{frequencyLabels[income.frequency] || 'N/A'}</TableCell>
                     <TableCell className="text-right">{formatCurrency(income.amount)}</TableCell>
                     <TableCell className="text-right">
                        <AlertDialog>

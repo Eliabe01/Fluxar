@@ -6,6 +6,7 @@ export interface FixedIncome {
     id: string;
     description: string;
     amount: number;
+    frequency: 'monthly' | 'fortnightly';
     createdAt: Timestamp;
 }
 

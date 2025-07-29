@@ -23,6 +23,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
@@ -34,6 +41,9 @@ const fixedIncomeFormSchema = z.object({
     message: "A descrição deve ter pelo menos 2 caracteres.",
   }),
   amount: z.coerce.number().positive({ message: "Por favor, insira um valor positivo." }),
+  frequency: z.enum(['monthly', 'fortnightly'], {
+    required_error: "A frequência é obrigatória.",
+  }),
 });
 
 type FixedIncomeFormValues = z.infer<typeof fixedIncomeFormSchema>;
@@ -49,6 +59,7 @@ export function AddFixedIncomeDialog({ children }: { children: React.ReactNode }
     defaultValues: {
       description: "",
       amount: undefined,
+      frequency: "monthly",
     },
   });
 
@@ -68,7 +79,7 @@ export function AddFixedIncomeDialog({ children }: { children: React.ReactNode }
         title: "Sucesso!",
         description: "Ganho fixo adicionado com sucesso.",
       });
-      form.reset({ description: "", amount: undefined });
+      form.reset({ description: "", amount: undefined, frequency: 'monthly' });
       setOpen(false);
     } catch (error) {
       toast({
@@ -85,7 +96,7 @@ export function AddFixedIncomeDialog({ children }: { children: React.ReactNode }
     <Dialog open={open} onOpenChange={(isOpen) => {
         setOpen(isOpen);
         if (!isOpen) {
-            form.reset({ description: "", amount: undefined });
+            form.reset({ description: "", amount: undefined, frequency: 'monthly' });
         }
     }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -112,25 +123,48 @@ export function AddFixedIncomeDialog({ children }: { children: React.ReactNode }
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Valor</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      placeholder="R$ 0,00" 
-                      {...field}
-                      value={field.value ?? ''}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
+            <div className="grid grid-cols-2 gap-4">
+               <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Valor</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        placeholder="R$ 0,00" 
+                        {...field}
+                        value={field.value ?? ''}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="frequency"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Frequência</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                       <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="monthly">Mensalmente</SelectItem>
+                        <SelectItem value="fortnightly">Quinzenalmente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
             <DialogFooter>
               <Button type="submit" disabled={isSaving}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
