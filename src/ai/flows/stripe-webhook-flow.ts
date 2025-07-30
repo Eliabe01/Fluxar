@@ -10,6 +10,7 @@ import { z } from 'genkit';
 import Stripe from 'stripe';
 import { updateUserSubscription, type UserSubscription } from '@/services/subscriptions';
 import { Timestamp } from 'firebase/firestore';
+import { auth as adminAuth } from '@/lib/firebase-admin';
 
 const StripeEventSchema = z.any();
 
@@ -34,17 +35,28 @@ const handleSubscriptionEvent = async (stripeSubscription: Stripe.Subscription) 
         return;
     }
 
+    const planName = stripeSubscription.metadata.plan || 'plano_desconhecido';
+    const subscriptionStatus = stripeSubscription.status;
+
     const subscriptionData: UserSubscription = {
         id: stripeSubscription.id,
         priceId: priceId,
-        status: stripeSubscription.status,
+        status: subscriptionStatus,
         collectionMethod: stripeSubscription.collection_method,
         current_period_end: Timestamp.fromMillis(stripeSubscription.current_period_end * 1000),
         cancel_at_period_end: stripeSubscription.cancel_at_period_end,
     };
     
+    // Atualiza o documento no Firestore
     await updateUserSubscription(userId, stripeSubscription.id, subscriptionData);
-    console.log(`[Webhook] Assinatura ${stripeSubscription.id} atualizada para o usuário ${userId}. Status: ${stripeSubscription.status}, Cancel at end: ${subscriptionData.cancel_at_period_end}`);
+    
+    // Define os Custom Claims no Firebase Auth
+    await adminAuth.setCustomUserClaims(userId, { 
+        plan: planName, 
+        status: subscriptionStatus,
+    });
+    
+    console.log(`[Webhook] Assinatura ${stripeSubscription.id} para usuário ${userId} atualizada. Claims definidos: plan=${planName}, status=${subscriptionStatus}`);
 };
 
 const handleInvoiceEvent = async (invoice: Stripe.Invoice) => {

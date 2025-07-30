@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -21,6 +22,8 @@ import { resetUserData as resetUserDataAction } from '@/actions/account';
 
 export type AppUser = User & {
     isAdmin?: boolean;
+    plan?: string;
+    subscriptionStatus?: SubscriptionStatus;
 };
 
 export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired';
@@ -73,6 +76,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userWithClaims: AppUser = {
             ...authUser,
             isAdmin: !!tokenResult.claims.admin,
+            plan: tokenResult.claims.plan as string || null,
+            subscriptionStatus: tokenResult.claims.status as SubscriptionStatus || null,
         };
         setUser(userWithClaims);
       } else {
@@ -99,8 +104,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!snapshot.empty) {
             const subDoc = snapshot.docs[0];
             const subData = subDoc.data() as Omit<UserSubscription, 'id'>;
-            setSubscription({ id: subDoc.id, ...subData });
-            setSubscriptionStatus(subData.status);
+            const sub = { id: subDoc.id, ...subData };
+            setSubscription(sub);
+            setSubscriptionStatus(sub.status);
+
+            // Re-check claims if local status differs from Firestore status
+            if (user.subscriptionStatus !== sub.status) {
+                auth.currentUser?.getIdToken(true);
+            }
+
         } else {
             setSubscription(null);
             setSubscriptionStatus(null);
@@ -127,7 +139,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await auth.currentUser.reload();
         
         const tokenResult = await auth.currentUser.getIdTokenResult(true);
-        const updatedUser: AppUser = { ...auth.currentUser, isAdmin: !!tokenResult.claims.admin };
+        const updatedUser: AppUser = {
+             ...auth.currentUser,
+            isAdmin: !!tokenResult.claims.admin,
+            plan: tokenResult.claims.plan as string || null,
+            subscriptionStatus: tokenResult.claims.status as SubscriptionStatus || null,
+         };
         setUser(updatedUser);
 
     } else {
