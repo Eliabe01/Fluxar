@@ -35,10 +35,10 @@ const navItems = [
   { href: "/installments", label: "Contas Parceladas", icon: CreditCard, requiredPlan: "bronze" },
   { href: "/bills", label: "Boletos", icon: Barcode, requiredPlan: "bronze" },
   { href: "/budgets", label: "Orçamentos", icon: Target, requiredPlan: "bronze" },
-  { href: "/dreams", label: "Meus Sonhos", icon: Trophy, requiredPlan: "prata" },
+  { href: "/dreams", label: "Meus Sonhos", icon: Trophy, requiredPlan: "bronze" },
   { href: "/invest", label: "Investimentos", icon: Landmark, requiredPlan: "prata" },
-  { href: "/reports", label: "Relatórios", icon: BarChart3, requiredPlan: "prata" },
-  { href: "/analysis", label: "Análise Financeira", icon: Sparkles, requiredPlan: "ouro" },
+  { href: "/reports", label: "Relatórios", icon: BarChart3, requiredPlan: "bronze" },
+  { href: "/analysis", label: "Análise Financeira", icon: Sparkles, requiredPlan: "prata" },
   { href: "/settings", label: "Configurações", icon: Settings },
 ];
 
@@ -67,8 +67,9 @@ export function SidebarNav() {
         let isDisabled = false;
         let tooltip = item.label;
 
-        if ('requiredPlan' in item) {
-            const userPlanLevel = user?.plan ? planLevels[user.plan] : 0;
+        if ('requiredPlan' in item && item.requiredPlan) {
+            const userPlan = user?.plan || 'none';
+            const userPlanLevel = planLevels[userPlan] || 0;
             const requiredPlanLevel = planLevels[item.requiredPlan];
 
             if (userPlanLevel < requiredPlanLevel) {
