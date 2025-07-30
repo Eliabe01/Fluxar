@@ -27,18 +27,18 @@ import {
 import { useAuth } from "@/lib/auth";
 
 const navItems = [
-  { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Painel", icon: LayoutDashboard, requiredPlan: "bronze" },
   { href: "/transactions", label: "Gastos Diários", icon: ArrowRightLeft, requiredPlan: "bronze" },
-  { href: "/fixed-income", label: "Ganhos Fixos", icon: CalendarClock, requiredPlan: "bronze" },
-  { href: "/extra-income", label: "Ganhos Extras", icon: Gift, requiredPlan: "bronze" },
-  { href: "/fixed-expenses", label: "Despesas Fixas", icon: Repeat, requiredPlan: "bronze" },
-  { href: "/installments", label: "Contas Parceladas", icon: CreditCard, requiredPlan: "bronze" },
   { href: "/bills", label: "Boletos", icon: Barcode, requiredPlan: "bronze" },
   { href: "/budgets", label: "Orçamentos", icon: Target, requiredPlan: "bronze" },
-  { href: "/dreams", label: "Meus Sonhos", icon: Trophy, requiredPlan: "bronze" },
   { href: "/reports", label: "Relatórios", icon: BarChart3, requiredPlan: "bronze" },
-  { href: "/invest", label: "Investimentos", icon: Landmark, requiredPlan: "prata" },
+  { href: "/fixed-income", label: "Ganhos Fixos", icon: CalendarClock, requiredPlan: "prata" },
+  { href: "/extra-income", label: "Ganhos Extras", icon: Gift, requiredPlan: "prata" },
+  { href: "/fixed-expenses", label: "Despesas Fixas", icon: Repeat, requiredPlan: "prata" },
+  { href: "/installments", label: "Contas Parceladas", icon: CreditCard, requiredPlan: "prata" },
+  { href: "/dreams", label: "Meus Sonhos", icon: Trophy, requiredPlan: "prata" },
   { href: "/analysis", label: "Análise Financeira", icon: Sparkles, requiredPlan: "prata" },
+  { href: "/invest", label: "Investimentos", icon: Landmark, requiredPlan: "ouro" },
   { href: "/settings", label: "Configurações", icon: Settings },
 ];
 
@@ -81,6 +81,12 @@ export function SidebarNav() {
             }
         }
         
+        // Settings é um caso especial, sempre habilitado
+        if (item.href === "/settings") {
+            isDisabled = false;
+            tooltip = item.label;
+        }
+
         return (
           <SidebarMenuItem key={item.href}>
             <SidebarMenuButton
