@@ -29,7 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [user, authLoading, pathname, router]);
 
-  if (authLoading) {
+  if (authLoading && !publicPages.includes(pathname)) {
     return <FullScreenLoader />;
   }
   
@@ -54,6 +54,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       );
   }
 
-  // Caso padrão, mostra o loader (geralmente durante transições de rota)
+  // Caso padrão, mostra o loader (geralmente durante transições de rota ou na primeira carga de /login)
   return <FullScreenLoader />;
 }
