@@ -63,6 +63,7 @@ export function SidebarNav() {
     <SidebarMenu className="flex-1 p-2">
       {allNavItems.map((item) => {
         
+        // Verifica se o item é administrativo e se o usuário não é admin. Se for o caso, não renderiza.
         if (item.admin && !user?.isAdmin) {
           return null;
         }
@@ -70,7 +71,8 @@ export function SidebarNav() {
         let isDisabled = false;
         let tooltip = item.label;
 
-        if ('requiredPlan' in item && item.requiredPlan) {
+        // Se não for um item de admin, verifica as permissões de plano
+        if (!item.admin && 'requiredPlan' in item && item.requiredPlan) {
             const requiredPlanLevel = planLevels[item.requiredPlan];
 
             if (userPlanLevel < requiredPlanLevel) {
