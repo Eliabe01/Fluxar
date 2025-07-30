@@ -36,8 +36,8 @@ const navItems = [
   { href: "/bills", label: "Boletos", icon: Barcode, requiredPlan: "bronze" },
   { href: "/budgets", label: "Orçamentos", icon: Target, requiredPlan: "bronze" },
   { href: "/dreams", label: "Meus Sonhos", icon: Trophy, requiredPlan: "bronze" },
-  { href: "/invest", label: "Investimentos", icon: Landmark, requiredPlan: "prata" },
   { href: "/reports", label: "Relatórios", icon: BarChart3, requiredPlan: "bronze" },
+  { href: "/invest", label: "Investimentos", icon: Landmark, requiredPlan: "prata" },
   { href: "/analysis", label: "Análise Financeira", icon: Sparkles, requiredPlan: "prata" },
   { href: "/settings", label: "Configurações", icon: Settings },
 ];
@@ -45,6 +45,7 @@ const navItems = [
 const adminNavItem = { href: "/admin", label: "Admin", icon: Shield, admin: true };
 
 const planLevels: { [key: string]: number } = {
+  none: 0,
   bronze: 1,
   prata: 2,
   ouro: 3,
@@ -55,6 +56,8 @@ export function SidebarNav() {
   const { user } = useAuth();
   
   const allNavItems = [...navItems, adminNavItem];
+
+  const userPlanLevel = planLevels[user?.plan || 'none'] || 0;
 
   return (
     <SidebarMenu className="flex-1 p-2">
@@ -68,8 +71,6 @@ export function SidebarNav() {
         let tooltip = item.label;
 
         if ('requiredPlan' in item && item.requiredPlan) {
-            const userPlan = user?.plan || 'none';
-            const userPlanLevel = planLevels[userPlan] || 0;
             const requiredPlanLevel = planLevels[item.requiredPlan];
 
             if (userPlanLevel < requiredPlanLevel) {

@@ -3,7 +3,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
-  getAuth, 
   onIdTokenChanged, 
   User, 
   signInWithEmailAndPassword, 
@@ -16,14 +15,14 @@ import {
   reauthenticateWithCredential,
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, onSnapshot, Timestamp, collection, query, where, limit } from 'firebase/firestore';
+import { collection, onSnapshot, Timestamp, query, where, limit } from 'firebase/firestore';
 import { updateUserStreak } from '@/services/gamification';
 import { resetUserData as resetUserDataAction } from '@/actions/account';
 
 export type AppUser = User & {
     isAdmin?: boolean;
     plan?: string;
-    subscriptionStatus?: SubscriptionStatus;
+    status?: SubscriptionStatus;
 };
 
 export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'none';
@@ -47,7 +46,6 @@ interface AuthContextType {
   user: AppUser | null;
   loading: boolean;
   subscription: UserSubscription | null;
-  subscriptionStatus: SubscriptionStatus | null;
   signIn: (email:string, password:string) => Promise<any>;
   signUp: typeof createUserWithEmailAndPassword;
   signOut: () => Promise<void>;
@@ -64,28 +62,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
-  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
-
 
   useEffect(() => {
     const unsubscribeAuth = onIdTokenChanged(auth, async (authUser) => {
       setLoading(true);
       if (authUser) {
         await updateUserStreak(authUser.uid);
-        const tokenResult = await authUser.getIdTokenResult(true); // Force refresh of the token
+        const tokenResult = await authUser.getIdTokenResult(true);
         const userWithClaims: AppUser = {
             ...authUser,
             isAdmin: !!tokenResult.claims.admin,
-            plan: (tokenResult.claims.plan as string) || null,
-            subscriptionStatus: (tokenResult.claims.status as SubscriptionStatus) || 'none',
+            plan: (tokenResult.claims.plan as string) || 'none',
+            status: (tokenResult.claims.status as SubscriptionStatus) || 'none',
         };
         setUser(userWithClaims);
       } else {
         setUser(null);
         setSubscription(null);
-        setSubscriptionStatus('none');
-        setLoading(false);
       }
+      setLoading(false);
     });
 
     return () => unsubscribeAuth();
@@ -100,22 +95,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const subscriptionsRef = collection(db, 'users', user.uid, 'subscriptions');
     const q = query(subscriptionsRef, where('status', 'in', ['active', 'trialing', 'past_due']), limit(1));
 
-    const unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+    const unsubscribeSnapshot = onSnapshot(q, async (snapshot) => {
         if (!snapshot.empty) {
             const subDoc = snapshot.docs[0];
             const subData = subDoc.data() as Omit<UserSubscription, 'id'>;
             const sub = { id: subDoc.id, ...subData };
             setSubscription(sub);
-            setSubscriptionStatus(sub.status);
 
-            // Re-check claims if local status differs from Firestore status
-            if (user.subscriptionStatus !== sub.status) {
-                auth.currentUser?.getIdToken(true);
+            // Se o status no Firestore for diferente do que temos nas claims, forçamos um refresh do token
+            // para garantir que o cliente tenha as informações mais recentes.
+            if (auth.currentUser && user.status !== sub.status) {
+                console.log("Forcing token refresh due to status mismatch.");
+                await auth.currentUser.getIdToken(true);
             }
-
         } else {
             setSubscription(null);
-            setSubscriptionStatus('none');
         }
         setLoading(false);
     }, (error) => {
@@ -142,8 +136,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const updatedUser: AppUser = {
              ...auth.currentUser,
             isAdmin: !!tokenResult.claims.admin,
-            plan: tokenResult.claims.plan as string || null,
-            subscriptionStatus: tokenResult.claims.status as SubscriptionStatus || null,
+            plan: tokenResult.claims.plan as string || 'none',
+            status: tokenResult.claims.status as SubscriptionStatus || 'none',
          };
         setUser(updatedUser);
 
@@ -186,7 +180,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     loading,
     subscription,
-    subscriptionStatus,
     signIn: handleSignIn,
     signUp: (email, password) => createUserWithEmailAndPassword(auth, email, password),
     signOut,

@@ -15,14 +15,12 @@ import { format } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
-const planDetails: { [key: string]: { name: string; price: string } } = {};
-if (process.env.STRIPE_PRICE_ID_BRONZE) planDetails[process.env.STRIPE_PRICE_ID_BRONZE] = { name: 'Bronze', price: 'R$19,90/mês' };
-if (process.env.STRIPE_PRICE_ID_PRATA) planDetails[process.env.STRIPE_PRICE_ID_PRATA] = { name: 'Prata', price: 'R$29,90/mês' };
-if (process.env.STRIPE_PRICE_ID_OURO) planDetails[process.env.STRIPE_PRICE_ID_OURO] = { name: 'Ouro', price: 'R$59,90/mês' };
-if (process.env.STRIPE_PIX_PRICE_ID_BRONZE) planDetails[process.env.STRIPE_PIX_PRICE_ID_BRONZE] = { name: 'Bronze', price: 'R$19,90/mês' };
-if (process.env.STRIPE_PIX_PRICE_ID_PRATA) planDetails[process.env.STRIPE_PIX_PRICE_ID_PRATA] = { name: 'Prata', price: 'R$29,90/mês' };
-if (process.env.STRIPE_PIX_PRICE_ID_OURO) planDetails[process.env.STRIPE_PIX_PRICE_ID_OURO] = { name: 'Ouro', price: 'R$59,90/mês' };
-
+const planDisplayName: { [key: string]: string } = {
+  bronze: 'Bronze',
+  prata: 'Prata',
+  ouro: 'Ouro',
+  none: 'Nenhum',
+};
 
 const statusDetails: { [key: string]: { text: string; icon: JSX.Element; color: string; description: string } } = {
     active: { text: "Ativo", icon: <CheckCircle className="text-green-500" />, color: "text-green-500", description: "Sua assinatura está em dia." },
@@ -96,7 +94,7 @@ export function SubscriptionCard() {
       );
     }
 
-    if (!subscription || !subscription.priceId || !subscription.status) {
+    if (!user || !user.plan || user.plan === 'none') {
       return (
         <div className="text-center">
           <p className="text-muted-foreground">Você não possui uma assinatura ativa.</p>
@@ -105,27 +103,29 @@ export function SubscriptionCard() {
       );
     }
 
-    const currentPlan = planDetails[subscription.priceId as keyof typeof planDetails];
-    const currentStatus = statusDetails[subscription.status] || { text: subscription.status, icon: <PauseCircle />, color: "", description: "" };
-    const endDate = subscription.current_period_end ? subscription.current_period_end.toDate() : null;
-    const isAutoRenew = subscription.collectionMethod === 'charge_automatically';
+    const currentPlanName = planDisplayName[user.plan] || 'Plano Desconhecido';
+    const currentStatus = statusDetails[user.status!] || { text: user.status, icon: <PauseCircle />, color: "", description: "" };
+    const endDate = subscription?.current_period_end ? subscription.current_period_end.toDate() : null;
+    const isAutoRenew = subscription?.collectionMethod === 'charge_automatically';
 
     return (
       <div className="space-y-6">
         <div>
-            <h3 className="text-2xl font-bold">{currentPlan?.name || 'Plano desconhecido'}</h3>
+            <h3 className="text-2xl font-bold">Plano {currentPlanName}</h3>
             
             <div className="flex items-center gap-2 text-sm font-semibold mt-2">
                 {currentStatus.icon}
                 <span className={currentStatus.color}>{currentStatus.text}</span>
             </div>
             
-            <p className="text-sm text-muted-foreground mt-1">
-                {endDate ? `Seu acesso é válido até ${format(endDate, "dd/MM/yyyy")}.` : ''}
-            </p>
+            {endDate && (
+              <p className="text-sm text-muted-foreground mt-1">
+                  Seu acesso é válido até {format(endDate, "dd/MM/yyyy")}.
+              </p>
+            )}
         </div>
 
-        {subscription.cancel_at_period_end && endDate && (
+        {subscription?.cancel_at_period_end && endDate && (
             <div className="flex items-start gap-3 rounded-lg border border-amber-500/50 bg-amber-500/10 p-4 text-amber-700">
                 <Info className="h-5 w-5 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
@@ -135,7 +135,7 @@ export function SubscriptionCard() {
             </div>
         )}
         
-        {!subscription.cancel_at_period_end && (
+        {!subscription?.cancel_at_period_end && subscription?.collectionMethod && (
             <div className="flex items-center space-x-2 rounded-lg border p-4">
                 <Switch 
                     id="auto-renew" 
@@ -166,13 +166,13 @@ export function SubscriptionCard() {
       <CardContent>
         {renderContent()}
       </CardContent>
-      {subscription && (
+      {user?.plan !== 'none' && (
         <CardFooter className="flex flex-wrap items-center justify-between gap-2 border-t px-6 py-4">
             <div className="flex flex-wrap gap-2">
               <Button onClick={() => router.push('/#pricing')} variant="outline" disabled={loading}>
                   Trocar Plano
               </Button>
-               {!subscription.cancel_at_period_end && (
+               {!subscription?.cancel_at_period_end && (
                  <Button variant="destructive" onClick={handleCancelSubscription} disabled={isCanceling || loading}>
                       {isCanceling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                      Cancelar Assinatura
