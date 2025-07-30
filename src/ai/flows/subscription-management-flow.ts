@@ -89,6 +89,10 @@ const cancelSubscriptionFlow = ai.defineFlow(
     if (subscriptionId.startsWith('pix-')) {
         try {
             const currentSub = await getUserSubscription(userId, subscriptionId);
+            if (!currentSub) {
+                throw new Error(`Assinatura interna ${subscriptionId} não encontrada para o usuário ${userId}.`);
+            }
+            
             const isPendingPayment = currentSub?.status === 'past_due' || currentSub?.status === 'unpaid';
 
             // Se o pagamento estiver pendente, cancela imediatamente.
@@ -101,7 +105,7 @@ const cancelSubscriptionFlow = ai.defineFlow(
                 await updateUserSubscription(userId, subscriptionId, { cancel_at_period_end: true });
                 console.log(`[Flow:CancelSub] Assinatura interna ${subscriptionId} do usuário ${userId} agendada para cancelamento no fim do período.`);
             }
-            return; // Encerra o flow aqui.
+            return { success: true }; // Encerra o flow aqui, retornando um objeto serializável.
         } catch (error: any) {
              console.error(`[Flow:CancelSub] Erro ao cancelar assinatura interna ${subscriptionId}:`, error.message);
              throw new Error(`Falha ao cancelar a assinatura interna: ${error.message}`);
