@@ -14,6 +14,7 @@ import { updateSubscriptionMethod, cancelSubscription } from '@/ai/flows/subscri
 import { format } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { PricingDialog } from './pricing-dialog';
 
 const planDisplayName: { [key: string]: string } = {
   bronze: 'Bronze',
@@ -39,6 +40,7 @@ export function SubscriptionCard() {
   const [isManaging, setIsManaging] = useState(false);
   const [isUpdatingMethod, setIsUpdatingMethod] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
+  const [isPricingDialogOpen, setIsPricingDialogOpen] = useState(false);
 
   const handleManageBilling = async () => {
     if (!user || !user.email) return;
@@ -159,33 +161,43 @@ export function SubscriptionCard() {
   };
   
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Minha Assinatura</CardTitle>
-        <CardDescription>Gerencie seu plano e informações de faturamento.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {renderContent()}
-      </CardContent>
-      {user?.plan !== 'none' && (
-        <CardFooter className="flex flex-wrap items-center justify-between gap-2 border-t px-6 py-4">
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={() => router.push('/#pricing')} variant="outline" disabled={loading}>
-                  Trocar Plano
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Minha Assinatura</CardTitle>
+          <CardDescription>Gerencie seu plano e informações de faturamento.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {renderContent()}
+        </CardContent>
+        {user?.plan !== 'none' && (
+          <CardFooter className="flex flex-wrap items-center justify-between gap-2 border-t px-6 py-4">
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => setIsPricingDialogOpen(true)} variant="outline" disabled={loading || subscription?.cancel_at_period_end}>
+                    Trocar Plano
+                </Button>
+                 {!subscription?.cancel_at_period_end && (
+                   <Button variant="destructive" onClick={handleCancelSubscription} disabled={isCanceling || loading}>
+                        {isCanceling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                       Cancelar Assinatura
+                   </Button>
+               )}
+              </div>
+              <Button onClick={handleManageBilling} disabled={isManaging || loading}>
+                {isManaging && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Gerenciar Cobrança
               </Button>
-               {!subscription?.cancel_at_period_end && (
-                 <Button variant="destructive" onClick={handleCancelSubscription} disabled={isCanceling || loading}>
-                      {isCanceling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                     Cancelar Assinatura
-                 </Button>
-             )}
-            </div>
-            <Button onClick={handleManageBilling} disabled={isManaging || loading}>
-              {isManaging && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Gerenciar Cobrança
-            </Button>
-        </CardFooter>
+          </CardFooter>
+        )}
+      </Card>
+      {subscription && (
+          <PricingDialog 
+              open={isPricingDialogOpen} 
+              onOpenChange={setIsPricingDialogOpen}
+              currentPlan={user?.plan as "bronze" | "prata" | "ouro"}
+              subscriptionId={subscription.id}
+          />
       )}
-    </Card>
+    </>
   );
 }

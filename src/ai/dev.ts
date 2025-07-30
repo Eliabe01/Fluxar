@@ -8,3 +8,4 @@ import './flows/customer-portal-flow';
 import './flows/delete-user-flow';
 import './flows/activate-pix-plan-flow';
 import './flows/subscription-management-flow';
+import './flows/admin-management-flow';

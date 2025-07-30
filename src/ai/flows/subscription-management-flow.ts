@@ -5,6 +5,7 @@
  *
  * - updateSubscriptionMethod - Altera o método de cobrança de uma assinatura.
  * - cancelSubscription - Cancela uma assinatura ao final do período de cobrança.
+ * - changeSubscriptionPlan - Altera o plano de uma assinatura existente com rateio.
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
@@ -26,6 +27,14 @@ const CancelSubscriptionInputSchema = z.object({
 });
 export type CancelSubscriptionInput = z.infer<typeof CancelSubscriptionInputSchema>;
 
+// Define o schema para a entrada de mudança de plano
+const ChangePlanInputSchema = z.object({
+    subscriptionId: z.string().describe('O ID da assinatura a ser alterada.'),
+    newPriceId: z.string().describe('O ID do novo preço do Stripe.'),
+});
+export type ChangePlanInput = z.infer<typeof ChangePlanInputSchema>;
+
+
 const getStripeInstance = () => {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('A chave secreta do Stripe não está configurada.');
@@ -41,6 +50,11 @@ export async function updateSubscriptionMethod(input: UpdateMethodInput): Promis
 // Função exportada para cancelar a assinatura
 export async function cancelSubscription(input: CancelSubscriptionInput): Promise<Stripe.Subscription | void> {
   return cancelSubscriptionFlow(input);
+}
+
+// Função exportada para mudar o plano
+export async function changeSubscriptionPlan(input: ChangePlanInput): Promise<Stripe.Subscription> {
+    return changeSubscriptionPlanFlow(input);
 }
 
 
@@ -98,7 +112,7 @@ const cancelSubscriptionFlow = ai.defineFlow(
             // Se o pagamento estiver pendente, cancela imediatamente.
             // Senão, apenas agenda o cancelamento para o fim do período.
             if (isPendingPayment) {
-                await updateUserSubscription(userId, subscriptionId, { status: 'canceled', cancel_at_period_end: true });
+                await updateUserSubscription(userId, subscriptionId, { status: 'canceled', cancel_at_period_end: false });
                 await adminAuth.setCustomUserClaims(userId, { plan: 'none', status: 'canceled' });
                 console.log(`[Flow:CancelSub] Assinatura interna ${subscriptionId} do usuário ${userId} cancelada imediatamente por pendência.`);
             } else {
@@ -136,7 +150,7 @@ const cancelSubscriptionFlow = ai.defineFlow(
 
           // Atualiza o Firestore imediatamente para a UI refletir a mudança.
           await updateUserSubscription(userId, subscriptionId, {
-            cancel_at_period_end: updatedSub.cancel_at_period_end,
+            cancel_at_period_end: updatedSubscription.cancel_at_period_end,
             status: 'active', // Mantém o status como ativo até o fim do ciclo
           });
 
@@ -149,4 +163,40 @@ const cancelSubscriptionFlow = ai.defineFlow(
       throw new Error(`Falha ao cancelar a assinatura: ${error.message}`);
     }
   }
+);
+
+
+const changeSubscriptionPlanFlow = ai.defineFlow(
+    {
+        name: 'changeSubscriptionPlanFlow',
+        inputSchema: ChangePlanInputSchema,
+        outputSchema: z.any(),
+    },
+    async ({ subscriptionId, newPriceId }) => {
+        const stripe = getStripeInstance();
+        try {
+            // Primeiro, recupere a assinatura para obter o ID do item de assinatura atual
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            if (!subscription.items.data[0]) {
+                throw new Error("Nenhum item encontrado na assinatura.");
+            }
+            const currentItemId = subscription.items.data[0].id;
+
+            // Atualize a assinatura com o novo preço e habilite o rateio
+            const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
+                items: [{
+                    id: currentItemId,
+                    price: newPriceId,
+                }],
+                proration_behavior: 'create_prorations', // Chave para calcular o rateio
+            });
+
+            console.log(`[Flow:ChangePlan] Plano da assinatura ${subscriptionId} alterado para ${newPriceId} com rateio.`);
+            return updatedSubscription;
+
+        } catch (error: any) {
+            console.error(`[Flow:ChangePlan] Erro ao alterar o plano da assinatura ${subscriptionId}:`, error.message);
+            throw new Error(`Falha ao alterar o plano da assinatura: ${error.message}`);
+        }
+    }
 );
