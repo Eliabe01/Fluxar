@@ -12,10 +12,25 @@ import {
     updateDoc,
     serverTimestamp,
     runTransaction,
-    collectionGroup,
+    getDoc,
 } from 'firebase/firestore';
 import { addTransaction } from '@/services/transactions';
 import type { Dream } from '@/services/dreams';
+import *d from 'zod';
+
+const dreamSchema = z.object({
+  title: z.string().min(3, { message: 'O título deve ter pelo menos 3 caracteres.' }),
+  targetAmount: z.coerce.number().positive({ message: 'A meta de valor deve ser positiva.' }),
+  dueDate: z.coerce.date({ message: 'A data da meta é obrigatória.' }),
+  imageFile: z.instanceof(File, { message: 'A imagem é obrigatória.' })
+    .refine((file) => file.size > 0, 'A imagem é obrigatória.')
+});
+
+const updateDreamSchema = dreamSchema.extend({
+  dreamId: z.string().min(1),
+  imageFile: z.instanceof(File).optional(),
+});
+
 
 const uploadImage = async (userId: string, dreamId: string, imageFile: File): Promise<{ imageURL: string, imagePath: string }> => {
     const storage = getStorage();
@@ -30,25 +45,30 @@ const uploadImage = async (userId: string, dreamId: string, imageFile: File): Pr
 export const addDream = async (formData: FormData) => {
     const { currentUser } = auth;
     if (!currentUser) {
-        throw new Error("Usuário não autenticado.");
+        throw new Error('Usuário não autenticado.');
     }
 
-    const dream = {
-        title: formData.get('title') as string,
-        targetAmount: parseFloat(formData.get('targetAmount') as string),
-        dueDate: new Date(formData.get('dueDate') as string),
+    const rawData = {
+        title: formData.get('title'),
+        targetAmount: formData.get('targetAmount'),
+        dueDate: formData.get('dueDate'),
+        imageFile: formData.get('imageFile'),
     };
-    const imageFile = formData.get('imageFile') as File;
 
-    if (!imageFile) {
-        throw new Error("Imagem é obrigatória.");
+    const validation = dreamSchema.safeParse(rawData);
+    if (!validation.success) {
+        throw new Error(validation.error.errors.map(e => e.message).join(', '));
     }
+    
+    const { title, targetAmount, dueDate, imageFile } = validation.data;
     
     const tempDocRef = doc(collection(db, 'users', currentUser.uid, 'dreams'));
     const { imageURL, imagePath } = await uploadImage(currentUser.uid, tempDocRef.id, imageFile);
 
     await addDoc(collection(db, 'users', currentUser.uid, 'dreams'), {
-        ...dream,
+        title,
+        targetAmount,
+        dueDate,
         currentAmount: 0,
         imageURL,
         imagePath,
@@ -61,24 +81,37 @@ export const addDream = async (formData: FormData) => {
 export const updateDream = async (formData: FormData) => {
     const { currentUser } = auth;
     if (!currentUser) {
-        throw new Error("Usuário não autenticado.");
+        throw new Error('Usuário não autenticado.');
+    }
+    
+    const rawData = {
+        dreamId: formData.get('dreamId'),
+        title: formData.get('title'),
+        targetAmount: formData.get('targetAmount'),
+        dueDate: formData.get('dueDate'),
+        imageFile: formData.get('imageFile') || undefined,
+    };
+    
+    const validation = updateDreamSchema.safeParse(rawData);
+    if (!validation.success) {
+        throw new Error(validation.error.errors.map(e => e.message).join(', '));
     }
 
-    const dreamId = formData.get('dreamId') as string;
-    const dreamData = {
-        title: formData.get('title') as string,
-        targetAmount: parseFloat(formData.get('targetAmount') as string),
-        dueDate: new Date(formData.get('dueDate') as string),
-    };
-    const newImageFile = formData.get('imageFile') as File | null;
+    const { dreamId, title, targetAmount, dueDate, imageFile } = validation.data;
 
     const docRef = doc(db, 'users', currentUser.uid, 'dreams', dreamId);
 
-    const updateData: any = { ...dreamData };
+    const updateData: any = { title, targetAmount, dueDate };
 
-    if (newImageFile) {
-        // Here you might want to delete the old image from storage first
-        const { imageURL, imagePath } = await uploadImage(currentUser.uid, dreamId, newImageFile);
+    if (imageFile && imageFile.size > 0) {
+        const dreamDoc = await getDoc(docRef);
+        const oldImagePath = dreamDoc.data()?.imagePath;
+        if (oldImagePath) {
+            const oldImageRef = ref(getStorage(), oldImagePath);
+            await deleteObject(oldImageRef).catch(err => console.warn("Imagem antiga não encontrada para deletar ou erro:", err));
+        }
+        
+        const { imageURL, imagePath } = await uploadImage(currentUser.uid, dreamId, imageFile);
         updateData.imageURL = imageURL;
         updateData.imagePath = imagePath;
     }
