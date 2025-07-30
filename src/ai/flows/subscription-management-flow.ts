@@ -136,7 +136,7 @@ const cancelSubscriptionFlow = ai.defineFlow(
 
           // Atualiza o Firestore imediatamente para a UI refletir a mudança.
           await updateUserSubscription(userId, subscriptionId, {
-            cancel_at_period_end: updatedSubscription.cancel_at_period_end,
+            cancel_at_period_end: updatedSub.cancel_at_period_end,
             status: 'active', // Mantém o status como ativo até o fim do ciclo
           });
 
