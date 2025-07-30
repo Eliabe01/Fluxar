@@ -75,7 +75,7 @@ export function SubscriptionCard() {
     setIsCanceling(true);
     try {
         await cancelSubscription({ subscriptionId: subscription.id, userId: user.uid });
-        toast({ title: "Assinatura será cancelada", description: "Sua assinatura será cancelada no final do período de cobrança atual." });
+        toast({ title: "Cancelamento solicitado", description: "Sua assinatura será cancelada no final do período de cobrança atual." });
     } catch(error: any) {
         toast({ variant: "destructive", title: "Erro", description: error.message || "Não foi possível cancelar a assinatura." });
     } finally {
@@ -104,7 +104,8 @@ export function SubscriptionCard() {
     }
 
     const currentPlanName = planDisplayName[user.plan] || 'Plano Desconhecido';
-    const currentStatus = statusDetails[user.status!] || { text: user.status, icon: <PauseCircle />, color: "", description: "" };
+    const statusKey = user.status || 'none';
+    const currentStatus = statusDetails[statusKey] || { text: user.status, icon: <PauseCircle />, color: "", description: "" };
     const endDate = subscription?.current_period_end ? subscription.current_period_end.toDate() : null;
     const isAutoRenew = subscription?.collectionMethod === 'charge_automatically';
 

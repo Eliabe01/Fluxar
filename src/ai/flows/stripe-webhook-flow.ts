@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Processa eventos de webhook do Stripe para gerenciar assinaturas.
@@ -21,7 +20,7 @@ const getStripeInstance = () => {
 };
 
 
-const handleSubscriptionEvent = async (stripeSubscription: Stripe.Subscription) => {
+const handleSubscriptionEvent = async (stripeSubscription: Stripe.Subscription, eventType: string) => {
     const userId = stripeSubscription.metadata.firebaseUserId;
     if (!userId) {
         console.error(`[Webhook] Assinatura ${stripeSubscription.id} sem firebaseUserId nos metadados.`);
@@ -36,34 +35,43 @@ const handleSubscriptionEvent = async (stripeSubscription: Stripe.Subscription) 
     }
 
     const planName = stripeSubscription.metadata.plan || 'plano_desconhecido';
-    const subscriptionStatus = stripeSubscription.status;
-
-    const subscriptionData: UserSubscription = {
+    
+    const subscriptionData: Partial<UserSubscription> = {
         id: stripeSubscription.id,
         priceId: priceId,
-        status: subscriptionStatus,
         collectionMethod: stripeSubscription.collection_method,
         current_period_end: Timestamp.fromMillis(stripeSubscription.current_period_end * 1000),
         cancel_at_period_end: stripeSubscription.cancel_at_period_end,
     };
     
+    // Lógica para "soft-cancel" e "hard-cancel"
+    if (eventType === 'customer.subscription.deleted') {
+        subscriptionData.status = 'canceled';
+        // Atualiza claims para remover o acesso imediatamente
+        await adminAuth.setCustomUserClaims(userId, { plan: 'none', status: 'canceled' });
+    } else {
+        // Se cancel_at_period_end for true, o usuário ainda tem acesso.
+        // O status no Stripe pode ser 'active' ou 'canceled', mas para nós, ele está ativo até o fim do período.
+        subscriptionData.status = stripeSubscription.cancel_at_period_end ? 'active' : stripeSubscription.status;
+        
+        // Atualiza as claims com o status real (ativo ou não)
+        await adminAuth.setCustomUserClaims(userId, { 
+            plan: planName, 
+            status: stripeSubscription.status,
+        });
+    }
+
     // Atualiza o documento no Firestore
     await updateUserSubscription(userId, stripeSubscription.id, subscriptionData);
     
-    // Define os Custom Claims no Firebase Auth
-    await adminAuth.setCustomUserClaims(userId, { 
-        plan: planName, 
-        status: subscriptionStatus,
-    });
-    
-    console.log(`[Webhook] Assinatura ${stripeSubscription.id} para usuário ${userId} atualizada. Claims definidos: plan=${planName}, status=${subscriptionStatus}`);
+    console.log(`[Webhook] Assinatura ${stripeSubscription.id} para usuário ${userId} processada. Evento: ${eventType}, Status salvo: ${subscriptionData.status}`);
 };
 
-const handleInvoiceEvent = async (invoice: Stripe.Invoice) => {
+const handleInvoiceEvent = async (invoice: Stripe.Invoice, eventType: string) => {
     if (invoice.subscription) {
       const stripe = getStripeInstance();
       const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
-      await handleSubscriptionEvent(subscription);
+      await handleSubscriptionEvent(subscription, eventType);
     }
 }
 
@@ -85,16 +93,19 @@ const stripeWebhookFlow = ai.defineFlow(
         switch (event.type) {
             case 'customer.subscription.created':
             case 'customer.subscription.updated':
-            case 'customer.subscription.deleted':
             case 'customer.subscription.trial_will_end':
-                await handleSubscriptionEvent(event.data.object as Stripe.Subscription);
+                await handleSubscriptionEvent(event.data.object as Stripe.Subscription, event.type);
                 break;
             
+            case 'customer.subscription.deleted':
+                await handleSubscriptionEvent(event.data.object as Stripe.Subscription, event.type);
+                break;
+
             case 'invoice.payment_succeeded':
             case 'invoice.payment_failed':
             case 'invoice.paid':
             case 'invoice.finalized':
-                await handleInvoiceEvent(event.data.object as Stripe.Invoice);
+                await handleInvoiceEvent(event.data.object as Stripe.Invoice, event.type);
                 break;
 
             case 'checkout.session.completed':
@@ -102,7 +113,7 @@ const stripeWebhookFlow = ai.defineFlow(
                 if (session.mode === 'subscription' && session.subscription) {
                     const stripe = getStripeInstance();
                     const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
-                    await handleSubscriptionEvent(subscription);
+                    await handleSubscriptionEvent(subscription, event.type);
                 }
                 break;
 
