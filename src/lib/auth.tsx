@@ -17,6 +17,7 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { collection, onSnapshot, Timestamp, query, where, limit } from 'firebase/firestore';
 import { updateUserStreak } from '@/services/gamification';
+import { initializeOnboardingTasks } from '@/services/onboarding';
 import { resetUserData as resetUserDataAction } from '@/actions/account';
 
 export type AppUser = User & {
@@ -67,7 +68,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribeAuth = onIdTokenChanged(auth, async (authUser) => {
       setLoading(true);
       if (authUser) {
-        await updateUserStreak(authUser.uid);
+        await Promise.all([
+          updateUserStreak(authUser.uid),
+          initializeOnboardingTasks(authUser.uid)
+        ]);
         const tokenResult = await authUser.getIdTokenResult(true);
         const userWithClaims: AppUser = {
             ...authUser,
