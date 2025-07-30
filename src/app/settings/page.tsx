@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,15 +8,8 @@ import { ResetDataCard } from "@/components/settings/reset-data-card";
 import { DeleteAccountCard } from "@/components/settings/delete-account-card";
 import { GamificationCard } from "@/components/settings/gamification-card";
 import { SubscriptionCard } from "@/components/settings/subscription-card";
-import { useAuth } from "@/lib/auth";
-import { Lock } from "lucide-react";
-import { cn } from "@/lib/utils";
-
 
 export default function SettingsPage() {
-  const { subscriptionStatus } = useAuth();
-  const isPremium = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
-
   return (
     <div className="space-y-6">
       <div>
@@ -31,17 +23,11 @@ export default function SettingsPage() {
         <TabsList className="grid w-full grid-cols-4 max-w-lg">
           <TabsTrigger value="profile">Perfil</TabsTrigger>
           <TabsTrigger value="subscription">Assinatura</TabsTrigger>
-          <TabsTrigger value="password" disabled={!isPremium}>
-            <div className="flex items-center gap-2">
-              { !isPremium && <Lock className="h-4 w-4" /> }
-              Senha
-            </div>
+          <TabsTrigger value="password">
+            Senha
           </TabsTrigger>
-          <TabsTrigger value="account" disabled={!isPremium}>
-             <div className="flex items-center gap-2">
-              { !isPremium && <Lock className="h-4 w-4" /> }
-              Conta
-            </div>
+          <TabsTrigger value="account">
+            Conta
           </TabsTrigger>
         </TabsList>
 
