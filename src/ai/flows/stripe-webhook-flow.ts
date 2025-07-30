@@ -41,18 +41,20 @@ const handleSubscriptionEvent = async (stripeSubscription: Stripe.Subscription, 
         priceId: priceId,
         collectionMethod: stripeSubscription.collection_method,
         current_period_end: Timestamp.fromMillis(stripeSubscription.current_period_end * 1000),
-        cancel_at_period_end: stripeSubscription.cancel_at_period_end,
     };
     
     // Lógica para "soft-cancel" e "hard-cancel"
     if (eventType === 'customer.subscription.deleted') {
         subscriptionData.status = 'canceled';
+        subscriptionData.cancel_at_period_end = false;
         // Atualiza claims para remover o acesso imediatamente
         await adminAuth.setCustomUserClaims(userId, { plan: 'none', status: 'canceled' });
     } else {
-        // Se cancel_at_period_end for true, o usuário ainda tem acesso.
-        // O status no Stripe pode ser 'active' ou 'canceled', mas para nós, ele está ativo até o fim do período.
-        subscriptionData.status = stripeSubscription.cancel_at_period_end ? 'active' : stripeSubscription.status;
+        const isSoftCancel = stripeSubscription.cancel_at_period_end;
+        subscriptionData.cancel_at_period_end = isSoftCancel;
+        // Se for um cancelamento agendado, o status para nós continua 'active'.
+        // Caso contrário, usamos o status real do Stripe.
+        subscriptionData.status = isSoftCancel ? 'active' : stripeSubscription.status;
         
         // Atualiza as claims com o status real (ativo ou não)
         await adminAuth.setCustomUserClaims(userId, { 
@@ -71,6 +73,14 @@ const handleInvoiceEvent = async (invoice: Stripe.Invoice, eventType: string) =>
     if (invoice.subscription) {
       const stripe = getStripeInstance();
       const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+      
+      // Simulação de envio de e-mail para o usuário
+      if (eventType === 'invoice.payment_failed' || eventType === 'invoice.payment_action_required') {
+          console.log(`[Dunning] SIMULANDO ENVIO DE E-MAIL para ${invoice.customer_email}:`);
+          console.log(`- Assunto: Problema no pagamento da sua assinatura Fluxar`);
+          console.log(`- Mensagem: Olá, não conseguimos processar o pagamento da sua fatura. Por favor, atualize seu método de pagamento para manter seu acesso.`);
+      }
+
       await handleSubscriptionEvent(subscription, eventType);
     }
 }
@@ -102,9 +112,10 @@ const stripeWebhookFlow = ai.defineFlow(
                 break;
 
             case 'invoice.payment_succeeded':
-            case 'invoice.payment_failed':
             case 'invoice.paid':
             case 'invoice.finalized':
+            case 'invoice.payment_failed':
+            case 'invoice.payment_action_required':
                 await handleInvoiceEvent(event.data.object as Stripe.Invoice, event.type);
                 break;
 
