@@ -2,7 +2,7 @@
 'use server';
 
 import { Timestamp } from 'firebase/firestore';
-import { db as adminDb } from '@/lib/firebase-admin';
+import { db as adminDb, auth as adminAuth } from '@/lib/firebase-admin';
 import Stripe from 'stripe';
 import type { UserSubscription, UserSubscriptionData } from '@/lib/auth';
 
@@ -61,7 +61,7 @@ export const findOrCreateStripeCustomerId = async (userId: string, userEmail: st
     }
 };
 
-export const updateUserSubscription = async (userId: string, subscriptionId: string, subscriptionData: UserSubscription) => {
+export const updateUserSubscription = async (userId: string, subscriptionId: string, subscriptionData: Partial<UserSubscription>) => {
     if (!userId) throw new Error('User ID is required.');
     const subscriptionDocRef = adminDb.collection('users').doc(userId).collection('subscriptions').doc(subscriptionId);
     await subscriptionDocRef.set(subscriptionData, { merge: true });

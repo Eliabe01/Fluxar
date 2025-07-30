@@ -9,6 +9,8 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import Stripe from 'stripe';
+import { updateUserSubscription } from '@/services/subscriptions';
+import { auth as adminAuth } from '@/lib/firebase-admin';
 
 // Define o schema para a entrada de atualização de método
 const UpdateMethodInputSchema = z.object({
@@ -19,7 +21,7 @@ export type UpdateMethodInput = z.infer<typeof UpdateMethodInputSchema>;
 
 // Define o schema para a entrada de cancelamento
 const CancelSubscriptionInputSchema = z.object({
-    subscriptionId: z.string().describe('O ID da assinatura do Stripe a ser cancelada.'),
+    subscriptionId: z.string().describe('O ID da assinatura a ser cancelada.'),
     userId: z.string().describe('O ID do usuário do Firebase que possui a assinatura.'),
 });
 export type CancelSubscriptionInput = z.infer<typeof CancelSubscriptionInputSchema>;
@@ -37,7 +39,7 @@ export async function updateSubscriptionMethod(input: UpdateMethodInput): Promis
 }
 
 // Função exportada para cancelar a assinatura
-export async function cancelSubscription(input: CancelSubscriptionInput): Promise<Stripe.Subscription> {
+export async function cancelSubscription(input: CancelSubscriptionInput): Promise<Stripe.Subscription | void> {
   return cancelSubscriptionFlow(input);
 }
 
@@ -82,6 +84,21 @@ const cancelSubscriptionFlow = ai.defineFlow(
         throw new Error("ID do usuário é obrigatório para cancelar a assinatura.");
     }
     
+    // Se a assinatura for interna (ex: concedida por admin via PIX),
+    // apenas atualize o status no Firestore.
+    if (subscriptionId.startsWith('pix-')) {
+        try {
+            await updateUserSubscription(userId, subscriptionId, { status: 'canceled' });
+            await adminAuth.setCustomUserClaims(userId, { plan: 'none', status: 'canceled' });
+            console.log(`[Flow:CancelSub] Assinatura interna ${subscriptionId} do usuário ${userId} foi cancelada diretamente no Firestore.`);
+            return; // Encerra o flow aqui.
+        } catch (error: any) {
+             console.error(`[Flow:CancelSub] Erro ao cancelar assinatura interna ${subscriptionId}:`, error.message);
+             throw new Error(`Falha ao cancelar a assinatura interna: ${error.message}`);
+        }
+    }
+
+    // Se for uma assinatura normal do Stripe, prossiga com a API do Stripe.
     const stripe = getStripeInstance();
     try {
       const existingSubscription = await stripe.subscriptions.retrieve(subscriptionId);
@@ -93,11 +110,11 @@ const cancelSubscriptionFlow = ai.defineFlow(
         cancel_at_period_end: true,
       });
 
-      console.log(`[Flow:CancelSub] Assinatura ${subscriptionId} do usuário ${userId} programada para cancelamento.`);
+      console.log(`[Flow:CancelSub] Assinatura Stripe ${subscriptionId} do usuário ${userId} programada para cancelamento.`);
       return updatedSubscription;
 
     } catch (error: any) {
-      console.error(`[Flow:CancelSub] Erro ao programar cancelamento da assinatura ${subscriptionId}:`, error.message);
+      console.error(`[Flow:CancelSub] Erro ao programar cancelamento da assinatura Stripe ${subscriptionId}:`, error.message);
       throw new Error(`Falha ao cancelar a assinatura: ${error.message}`);
     }
   }
