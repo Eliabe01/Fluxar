@@ -9,7 +9,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import Stripe from 'stripe';
-import { updateUserSubscription } from '@/services/subscriptions';
+import { updateUserSubscription, getUserSubscription } from '@/services/subscriptions';
 import { auth as adminAuth } from '@/lib/firebase-admin';
 
 // Define o schema para a entrada de atualização de método
@@ -85,12 +85,22 @@ const cancelSubscriptionFlow = ai.defineFlow(
     }
     
     // Se a assinatura for interna (ex: concedida por admin via PIX),
-    // apenas atualize o status no Firestore.
+    // agende o cancelamento no Firestore em vez de na API do Stripe.
     if (subscriptionId.startsWith('pix-')) {
         try {
-            await updateUserSubscription(userId, subscriptionId, { status: 'canceled' });
-            await adminAuth.setCustomUserClaims(userId, { plan: 'none', status: 'canceled' });
-            console.log(`[Flow:CancelSub] Assinatura interna ${subscriptionId} do usuário ${userId} foi cancelada diretamente no Firestore.`);
+            const currentSub = await getUserSubscription(userId, subscriptionId);
+            const isPendingPayment = currentSub?.status === 'past_due' || currentSub?.status === 'unpaid';
+
+            // Se o pagamento estiver pendente, cancela imediatamente.
+            // Senão, apenas agenda o cancelamento para o fim do período.
+            if (isPendingPayment) {
+                await updateUserSubscription(userId, subscriptionId, { status: 'canceled', cancel_at_period_end: true });
+                await adminAuth.setCustomUserClaims(userId, { plan: 'none', status: 'canceled' });
+                console.log(`[Flow:CancelSub] Assinatura interna ${subscriptionId} do usuário ${userId} cancelada imediatamente por pendência.`);
+            } else {
+                await updateUserSubscription(userId, subscriptionId, { cancel_at_period_end: true });
+                console.log(`[Flow:CancelSub] Assinatura interna ${subscriptionId} do usuário ${userId} agendada para cancelamento no fim do período.`);
+            }
             return; // Encerra o flow aqui.
         } catch (error: any) {
              console.error(`[Flow:CancelSub] Erro ao cancelar assinatura interna ${subscriptionId}:`, error.message);
@@ -105,13 +115,22 @@ const cancelSubscriptionFlow = ai.defineFlow(
       if (existingSubscription.metadata.firebaseUserId !== userId) {
           throw new Error("Permissão negada. Você não pode cancelar esta assinatura.");
       }
-
-      const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
-        cancel_at_period_end: true,
-      });
-
-      console.log(`[Flow:CancelSub] Assinatura Stripe ${subscriptionId} do usuário ${userId} programada para cancelamento.`);
-      return updatedSubscription;
+      
+      const isPendingPayment = existingSubscription.status === 'past_due' || existingSubscription.status === 'unpaid';
+      
+      // Se o pagamento estiver pendente, cancela imediatamente.
+      // Senão, apenas agenda o cancelamento.
+      if (isPendingPayment) {
+          const deletedSubscription = await stripe.subscriptions.cancel(subscriptionId);
+          console.log(`[Flow:CancelSub] Assinatura Stripe ${subscriptionId} do usuário ${userId} cancelada imediatamente por pendência.`);
+          return deletedSubscription;
+      } else {
+          const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
+            cancel_at_period_end: true,
+          });
+          console.log(`[Flow:CancelSub] Assinatura Stripe ${subscriptionId} do usuário ${userId} programada para cancelamento.`);
+          return updatedSubscription;
+      }
 
     } catch (error: any) {
       console.error(`[Flow:CancelSub] Erro ao programar cancelamento da assinatura Stripe ${subscriptionId}:`, error.message);

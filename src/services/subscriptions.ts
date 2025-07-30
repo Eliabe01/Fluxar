@@ -66,3 +66,15 @@ export const updateUserSubscription = async (userId: string, subscriptionId: str
     const subscriptionDocRef = adminDb.collection('users').doc(userId).collection('subscriptions').doc(subscriptionId);
     await subscriptionDocRef.set(subscriptionData, { merge: true });
 };
+
+export const getUserSubscription = async (userId: string, subscriptionId: string): Promise<UserSubscription | null> => {
+    if (!userId) throw new Error('User ID is required.');
+    const subscriptionDocRef = adminDb.collection('users').doc(userId).collection('subscriptions').doc(subscriptionId);
+    const docSnap = await subscriptionDocRef.get();
+
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as UserSubscription;
+    }
+    
+    return null;
+}
