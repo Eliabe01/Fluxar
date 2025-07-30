@@ -26,7 +26,7 @@ export type AppUser = User & {
     subscriptionStatus?: SubscriptionStatus;
 };
 
-export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired';
+export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'none';
 
 export interface UserSubscription {
     id: string;
@@ -76,14 +76,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userWithClaims: AppUser = {
             ...authUser,
             isAdmin: !!tokenResult.claims.admin,
-            plan: tokenResult.claims.plan as string || null,
-            subscriptionStatus: tokenResult.claims.status as SubscriptionStatus || null,
+            plan: (tokenResult.claims.plan as string) || null,
+            subscriptionStatus: (tokenResult.claims.status as SubscriptionStatus) || 'none',
         };
         setUser(userWithClaims);
       } else {
         setUser(null);
         setSubscription(null);
-        setSubscriptionStatus(null);
+        setSubscriptionStatus('none');
         setLoading(false);
       }
     });
@@ -115,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         } else {
             setSubscription(null);
-            setSubscriptionStatus(null);
+            setSubscriptionStatus('none');
         }
         setLoading(false);
     }, (error) => {

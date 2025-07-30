@@ -28,26 +28,31 @@ import { useAuth } from "@/lib/auth";
 
 const navItems = [
   { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
-  { href: "/transactions", label: "Gastos Diários", icon: ArrowRightLeft, premium: true },
-  { href: "/fixed-income", label: "Ganhos Fixos", icon: CalendarClock, premium: true },
-  { href: "/extra-income", label: "Ganhos Extras", icon: Gift, premium: true },
-  { href: "/fixed-expenses", label: "Despesas Fixas", icon: Repeat, premium: true },
-  { href: "/installments", label: "Contas Parceladas", icon: CreditCard, premium: true },
-  { href: "/bills", label: "Boletos", icon: Barcode, premium: true },
-  { href: "/budgets", label: "Orçamentos", icon: Target, premium: true },
-  { href: "/dreams", label: "Meus Sonhos", icon: Trophy, premium: true },
-  { href: "/invest", label: "Investimentos", icon: Landmark, premium: true },
-  { href: "/reports", label: "Relatórios", icon: BarChart3, premium: true },
-  { href: "/analysis", label: "Análise Financeira", icon: Sparkles, premium: true },
+  { href: "/transactions", label: "Gastos Diários", icon: ArrowRightLeft, requiredPlan: "bronze" },
+  { href: "/fixed-income", label: "Ganhos Fixos", icon: CalendarClock, requiredPlan: "bronze" },
+  { href: "/extra-income", label: "Ganhos Extras", icon: Gift, requiredPlan: "bronze" },
+  { href: "/fixed-expenses", label: "Despesas Fixas", icon: Repeat, requiredPlan: "bronze" },
+  { href: "/installments", label: "Contas Parceladas", icon: CreditCard, requiredPlan: "bronze" },
+  { href: "/bills", label: "Boletos", icon: Barcode, requiredPlan: "bronze" },
+  { href: "/budgets", label: "Orçamentos", icon: Target, requiredPlan: "bronze" },
+  { href: "/dreams", label: "Meus Sonhos", icon: Trophy, requiredPlan: "prata" },
+  { href: "/invest", label: "Investimentos", icon: Landmark, requiredPlan: "prata" },
+  { href: "/reports", label: "Relatórios", icon: BarChart3, requiredPlan: "prata" },
+  { href: "/analysis", label: "Análise Financeira", icon: Sparkles, requiredPlan: "ouro" },
   { href: "/settings", label: "Configurações", icon: Settings },
 ];
 
 const adminNavItem = { href: "/admin", label: "Admin", icon: Shield, admin: true };
 
+const planLevels: { [key: string]: number } = {
+  bronze: 1,
+  prata: 2,
+  ouro: 3,
+};
+
 export function SidebarNav() {
   const pathname = usePathname();
-  const { user, subscriptionStatus } = useAuth();
-  const isSubscriptionActive = subscriptionStatus === 'active' || subscriptionStatus === 'trialing' || subscriptionStatus === 'past_due';
+  const { user } = useAuth();
   
   const allNavItems = [...navItems, adminNavItem];
 
@@ -59,10 +64,19 @@ export function SidebarNav() {
           return null;
         }
         
-        const isPremiumFeature = item.premium;
-        const isDisabled = isPremiumFeature && !isSubscriptionActive;
-        const tooltip = isDisabled ? `${item.label} (Requer Acesso)` : item.label;
+        let isDisabled = false;
+        let tooltip = item.label;
 
+        if ('requiredPlan' in item) {
+            const userPlanLevel = user?.plan ? planLevels[user.plan] : 0;
+            const requiredPlanLevel = planLevels[item.requiredPlan];
+
+            if (userPlanLevel < requiredPlanLevel) {
+                isDisabled = true;
+                tooltip = `${item.label} (Plano ${item.requiredPlan} ou superior)`;
+            }
+        }
+        
         return (
           <SidebarMenuItem key={item.href}>
             <SidebarMenuButton
