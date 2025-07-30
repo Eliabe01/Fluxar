@@ -76,8 +76,8 @@ export function SubscriptionCard() {
     try {
         await cancelSubscription({ subscriptionId: subscription.id, userId: user.uid });
         toast({ title: "Assinatura será cancelada", description: "Sua assinatura será cancelada no final do período de cobrança atual." });
-    } catch(error) {
-        toast({ variant: "destructive", title: "Erro", description: "Não foi possível cancelar a assinatura." });
+    } catch(error: any) {
+        toast({ variant: "destructive", title: "Erro", description: error.message || "Não foi possível cancelar a assinatura." });
     } finally {
         setIsCanceling(false);
     }

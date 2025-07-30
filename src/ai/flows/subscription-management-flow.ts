@@ -37,7 +37,7 @@ export async function updateSubscriptionMethod(input: UpdateMethodInput): Promis
 }
 
 // Função exportada para cancelar a assinatura
-export async function cancelSubscription(input: CancelSubscriptionInput): Promise<void> {
+export async function cancelSubscription(input: CancelSubscriptionInput): Promise<Stripe.Subscription> {
   return cancelSubscriptionFlow(input);
 }
 
@@ -75,22 +75,27 @@ const cancelSubscriptionFlow = ai.defineFlow(
   {
     name: 'cancelSubscriptionFlow',
     inputSchema: CancelSubscriptionInputSchema,
-    outputSchema: z.void(),
+    outputSchema: z.any(),
   },
   async ({ subscriptionId, userId }) => {
-    // Validação de autorização
     if (!userId) {
         throw new Error("ID do usuário é obrigatório para cancelar a assinatura.");
     }
     
     const stripe = getStripeInstance();
     try {
-      // Usamos 'cancel_at_period_end' para permitir que o usuário use o serviço até o fim do ciclo pago.
-      // O webhook 'customer.subscription.updated' irá capturar essa mudança e atualizar o Firestore.
-      await stripe.subscriptions.update(subscriptionId, {
+      const existingSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+      if (existingSubscription.metadata.firebaseUserId !== userId) {
+          throw new Error("Permissão negada. Você não pode cancelar esta assinatura.");
+      }
+
+      const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
         cancel_at_period_end: true,
       });
-      console.log(`[Flow:CancelSub] Assinatura ${subscriptionId} do usuário ${userId} programada para cancelamento no final do período.`);
+
+      console.log(`[Flow:CancelSub] Assinatura ${subscriptionId} do usuário ${userId} programada para cancelamento.`);
+      return updatedSubscription;
+
     } catch (error: any) {
       console.error(`[Flow:CancelSub] Erro ao programar cancelamento da assinatura ${subscriptionId}:`, error.message);
       throw new Error(`Falha ao cancelar a assinatura: ${error.message}`);
