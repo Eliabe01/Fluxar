@@ -10,7 +10,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { Timestamp } from 'firebase-admin/firestore';
 import { addDays } from 'date-fns';
-import { db as adminDb } from '@/lib/firebase-admin';
+import { db as adminDb, auth as adminAuth } from '@/lib/firebase-admin';
 import type { UserSubscription } from '@/services/subscriptions';
 
 
@@ -49,26 +49,31 @@ const activatePixPlanFlow = ai.defineFlow(
         const subscriptionId = `pix-${Date.now()}`;
         
         const priceIdKey = `STRIPE_PIX_PRICE_ID_${plan.toUpperCase()}`;
-        const priceId = process.env[priceIdKey];
-        
-        if (!priceId) {
-            throw new Error(`Price ID para o plano PIX "${plan}" não encontrado. Verifique a variável de ambiente ${priceIdKey}.`);
-        }
+        const priceId = process.env[priceIdKey] || `admin_granted_${plan}`;
         
         const subscriptionData: UserSubscription = {
             id: subscriptionId,
             priceId: priceId,
             status: 'active',
-            collectionMethod: 'send_invoice', // PIX is always a manual invoice
+            collectionMethod: 'send_invoice', // Admin grant is like a manual invoice
             current_period_end: Timestamp.fromDate(endDate),
-            cancel_at_period_end: false, // Default value
+            cancel_at_period_end: false,
         };
 
+        // 1. Update Firestore subscription document
         await updateUserSubscription(userId, subscriptionId, subscriptionData);
         
+        // 2. Set Custom Claims on Firebase Auth user
+        await adminAuth.setCustomUserClaims(userId, { 
+            plan: plan, 
+            status: 'active',
+        });
+        
+        console.log(`[Flow:ActivatePlan] Plano ${plan} ativado para usuário ${userId}. Claims definidos.`);
+
         return { success: true, message: 'Plano ativado com sucesso por 30 dias!' };
     } catch (error: any) {
-      console.error("Erro ao ativar plano via PIX:", error);
+      console.error("Erro ao ativar plano via PIX/Admin:", error);
       return { success: false, message: error.message || 'Falha ao ativar o plano.' };
     }
   }
