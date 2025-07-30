@@ -102,7 +102,7 @@ const cancelSubscriptionFlow = ai.defineFlow(
                 await adminAuth.setCustomUserClaims(userId, { plan: 'none', status: 'canceled' });
                 console.log(`[Flow:CancelSub] Assinatura interna ${subscriptionId} do usuário ${userId} cancelada imediatamente por pendência.`);
             } else {
-                await updateUserSubscription(userId, subscriptionId, { cancel_at_period_end: true });
+                await updateUserSubscription(userId, subscriptionId, { cancel_at_period_end: true, status: 'active' });
                 console.log(`[Flow:CancelSub] Assinatura interna ${subscriptionId} do usuário ${userId} agendada para cancelamento no fim do período.`);
             }
             return { success: true }; // Encerra o flow aqui, retornando um objeto serializável.
@@ -127,11 +127,19 @@ const cancelSubscriptionFlow = ai.defineFlow(
       if (isPendingPayment) {
           const deletedSubscription = await stripe.subscriptions.cancel(subscriptionId);
           console.log(`[Flow:CancelSub] Assinatura Stripe ${subscriptionId} do usuário ${userId} cancelada imediatamente por pendência.`);
+          // A atualização do Firestore será feita pelo webhook 'customer.subscription.deleted'
           return deletedSubscription;
       } else {
           const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
             cancel_at_period_end: true,
           });
+
+          // Atualiza o Firestore imediatamente para a UI refletir a mudança.
+          await updateUserSubscription(userId, subscriptionId, {
+            cancel_at_period_end: updatedSubscription.cancel_at_period_end,
+            status: 'active', // Mantém o status como ativo até o fim do ciclo
+          });
+
           console.log(`[Flow:CancelSub] Assinatura Stripe ${subscriptionId} do usuário ${userId} programada para cancelamento.`);
           return updatedSubscription;
       }
