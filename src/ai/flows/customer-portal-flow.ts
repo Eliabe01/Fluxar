@@ -22,6 +22,13 @@ const CustomerPortalOutputSchema = z.object({
 });
 export type CustomerPortalOutput = z.infer<typeof CustomerPortalOutputSchema>;
 
+const getStripeInstance = async () => {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) throw new Error('A chave secreta do Stripe não está configurada.');
+    const { default: Stripe } = await import('stripe');
+    return new Stripe(secretKey);
+};
+
 export async function createCustomerPortalSession(input: CustomerPortalInput): Promise<CustomerPortalOutput> {
   return createCustomerPortalFlow(input);
 }
@@ -34,13 +41,7 @@ const createCustomerPortalFlow = ai.defineFlow(
   },
   async ({ userId, userEmail }) => {
     
-    if (!process.env.STRIPE_SECRET_KEY) {
-      throw new Error('A chave secreta do Stripe não está configurada.');
-    }
-    
-    const { default: Stripe } = await import('stripe');
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    
+    const stripe = await getStripeInstance();
     const customerId = await findOrCreateStripeCustomerId(userId, userEmail);
 
     const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/settings`;
