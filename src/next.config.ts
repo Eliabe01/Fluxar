@@ -1,11 +1,11 @@
 
 import type {NextConfig} from 'next';
 
-const nextConfig: NextConfig = {
-  async headers() {
-    const cspHeader = `
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+const cspHeader = `
       default-src 'self';
-      script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://fonts.googleapis.com;
+      script-src 'self' ${isDevelopment ? "'unsafe-eval'" : ''} 'unsafe-inline' https://js.stripe.com https://fonts.googleapis.com;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       img-src 'self' blob: data: https://firebasestorage.googleapis.com https://i.imgur.com https://placehold.co;
       font-src 'self' https://fonts.gstatic.com;
@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
       connect-src 'self' https://firestore.googleapis.com wss://firestore.googleapis.com https://www.googleapis.com https://identitytoolkit.googleapis.com https://api.stripe.com https://fonts.googleapis.com;
     `.replace(/\s{2,}/g, ' ').trim();
 
+const nextConfig: NextConfig = {
+  async headers() {
     return [
       {
         source: '/:path*',
