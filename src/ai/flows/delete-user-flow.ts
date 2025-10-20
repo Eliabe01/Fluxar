@@ -9,11 +9,12 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { auth as adminAuth, db as adminDb } from '@/lib/firebase-admin';
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
 
-const getStripeInstance = () => {
+const getStripeInstance = async () => {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('A chave secreta do Stripe não está configurada.');
+    const { default: Stripe } = await import('stripe');
     return new Stripe(secretKey, { apiVersion: '2024-04-10' });
 };
 
@@ -53,7 +54,7 @@ const deleteStripeCustomer = async (userId: string) => {
         const stripeCustomerId = userData?.stripeCustomerId;
 
         if (stripeCustomerId) {
-            const stripe = getStripeInstance();
+            const stripe = await getStripeInstance();
             await stripe.customers.del(stripeCustomerId);
             console.log(`[Flow:DeleteUser] Cliente Stripe ${stripeCustomerId} deletado.`);
         }

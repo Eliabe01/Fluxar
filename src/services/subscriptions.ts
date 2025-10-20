@@ -3,7 +3,6 @@
 
 import { Timestamp } from 'firebase/firestore';
 import { db as adminDb, auth as adminAuth } from '@/lib/firebase-admin';
-import Stripe from 'stripe';
 import type { UserSubscription, UserSubscriptionData } from '@/lib/auth';
 
 export { type UserSubscription, type UserSubscriptionData } from '@/lib/auth';
@@ -15,11 +14,12 @@ export interface PaymentHistoryEntry {
   date: Timestamp;
 }
 
-const getStripeInstance = () => {
+const getStripeInstance = async () => {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) {
       throw new Error('A chave secreta do Stripe não está configurada.');
     }
+    const { default: Stripe } = await import('stripe');
     return new Stripe(secretKey, {
         apiVersion: '2024-04-10',
         typescript: true,
@@ -39,7 +39,7 @@ export const findOrCreateStripeCustomerId = async (userId: string, userEmail: st
             return userData.stripeCustomerId;
         }
 
-        const stripe = getStripeInstance();
+        const stripe = await getStripeInstance();
 
         const customer = await stripe.customers.create({
             email: userEmail,

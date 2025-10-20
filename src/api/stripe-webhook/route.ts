@@ -1,11 +1,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
 import { handleStripeWebhookEvent } from '@/ai/flows/stripe-webhook-flow';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-04-10',
-});
+
+const getStripeInstance = async () => {
+    const { default: Stripe } = await import('stripe');
+    return new Stripe(process.env.STRIPE_SECRET_KEY!, {
+        apiVersion: '2024-04-10',
+    });
+}
 
 // Este é o segredo do seu endpoint de webhook no Stripe.
 // Certifique-se de que esta variável de ambiente está definida.
@@ -26,6 +30,7 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event;
 
   try {
+    const stripe = await getStripeInstance();
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err: any) {
     console.error(`Falha na verificação do webhook: ${err.message}`);

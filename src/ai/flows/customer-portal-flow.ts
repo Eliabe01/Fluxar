@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Cria uma sessão do Portal do Cliente Stripe para um usuário.
@@ -7,7 +8,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
 import { findOrCreateStripeCustomerId } from '@/services/subscriptions';
 
 const CustomerPortalInputSchema = z.object({
@@ -37,6 +38,7 @@ const createCustomerPortalFlow = ai.defineFlow(
       throw new Error('A chave secreta do Stripe não está configurada.');
     }
     
+    const { default: Stripe } = await import('stripe');
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     
     const customerId = await findOrCreateStripeCustomerId(userId, userEmail);

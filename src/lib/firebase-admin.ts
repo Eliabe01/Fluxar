@@ -7,23 +7,25 @@ import admin from 'firebase-admin';
 let adminApp: App;
 
 if (!getApps().length) {
-  try {
     const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-    if (!privateKey) {
-        throw new Error("A variável de ambiente FIREBASE_PRIVATE_KEY não está definida.");
+    if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !privateKey) {
+        throw new Error("As variáveis de ambiente do Firebase Admin não estão completamente definidas.");
     }
-    adminApp = initializeApp({
-        credential: cert({
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-            privateKey: privateKey.replace(/\\n/g, '\n'),
-        }),
-    });
-    console.log('✅ Firebase Admin inicializado com sucesso via variáveis de ambiente!');
-  } catch (error: any) {
-    console.error('❌ Erro crítico ao inicializar Firebase Admin:', error.message);
-    throw new Error(`Falha na inicialização do Firebase: ${error.message}`);
-  }
+    
+    try {
+        adminApp = initializeApp({
+            credential: cert({
+                projectId: process.env.FIREBASE_PROJECT_ID,
+                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                privateKey: privateKey.replace(/\\n/g, '\n'),
+            }),
+        });
+        console.log('✅ Firebase Admin inicializado com sucesso via variáveis de ambiente!');
+    } catch (error: any) {
+        console.error('❌ Erro crítico ao inicializar Firebase Admin:', error.message);
+        // Em um ambiente de produção, isso deve impedir o build/deploy
+        throw new Error(`Falha na inicialização do Firebase: ${error.message}`);
+    }
 } else {
   adminApp = getApps()[0];
 }

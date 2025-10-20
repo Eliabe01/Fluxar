@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Processa eventos de webhook do Stripe para gerenciar assinaturas.
@@ -6,16 +7,17 @@
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
 import { updateUserSubscription, type UserSubscription } from '@/services/subscriptions';
 import { Timestamp } from 'firebase/firestore';
 import { auth as adminAuth } from '@/lib/firebase-admin';
 
 const StripeEventSchema = z.any();
 
-const getStripeInstance = () => {
+const getStripeInstance = async () => {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('A chave secreta do Stripe não está configurada.');
+    const { default: Stripe } = await import('stripe');
     return new Stripe(secretKey, { apiVersion: '2024-04-10' });
 };
 
@@ -71,7 +73,7 @@ const handleSubscriptionEvent = async (stripeSubscription: Stripe.Subscription, 
 
 const handleInvoiceEvent = async (invoice: Stripe.Invoice, eventType: string) => {
     if (invoice.subscription) {
-      const stripe = getStripeInstance();
+      const stripe = await getStripeInstance();
       const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
       
       // Simulação de envio de e-mail para o usuário
@@ -122,7 +124,7 @@ const stripeWebhookFlow = ai.defineFlow(
             case 'checkout.session.completed':
                 const session = event.data.object as Stripe.Checkout.Session;
                 if (session.mode === 'subscription' && session.subscription) {
-                    const stripe = getStripeInstance();
+                    const stripe = await getStripeInstance();
                     const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
                     await handleSubscriptionEvent(subscription, event.type);
                 }

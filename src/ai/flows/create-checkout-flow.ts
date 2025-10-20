@@ -8,7 +8,7 @@
 import 'dotenv/config';
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
 import { findOrCreateStripeCustomerId } from '@/services/subscriptions';
 
 const SubscriptionCheckoutInputSchema = z.object({
@@ -25,12 +25,13 @@ const SubscriptionCheckoutOutputSchema = z.object({
 export type SubscriptionCheckoutOutput = z.infer<typeof SubscriptionCheckoutOutputSchema>;
 
 
-const getStripeInstance = () => {
+const getStripeInstance = async () => {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) {
       console.error("[Stripe] Chave secreta do Stripe (STRIPE_SECRET_KEY) não encontrada nas variáveis de ambiente.");
       throw new Error('A chave secreta do Stripe não está configurada. O pagamento não pode ser processado.');
     }
+    const { default: Stripe } = await import('stripe');
     return new Stripe(secretKey, {
         apiVersion: '2024-04-10',
         typescript: true,
@@ -59,7 +60,7 @@ const createSubscriptionCheckoutFlow = ai.defineFlow(
         throw new Error(`Configuração de preço para o plano "${plan}" não encontrada.`);
     }
     
-    const stripe = getStripeInstance();
+    const stripe = await getStripeInstance();
     const customerId = await findOrCreateStripeCustomerId(userId, userEmail);
     const successUrl = `${process.env.NEXT_PUBLIC_APP_URL}/settings?checkout_success=true`;
     const cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL}/settings`;

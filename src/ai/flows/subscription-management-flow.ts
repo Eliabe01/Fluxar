@@ -9,7 +9,7 @@
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
 import { updateUserSubscription, getUserSubscription } from '@/services/subscriptions';
 import { auth as adminAuth } from '@/lib/firebase-admin';
 
@@ -35,9 +35,10 @@ const ChangePlanInputSchema = z.object({
 export type ChangePlanInput = z.infer<typeof ChangePlanInputSchema>;
 
 
-const getStripeInstance = () => {
+const getStripeInstance = async () => {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('A chave secreta do Stripe não está configurada.');
+    const { default: Stripe } = await import('stripe');
     return new Stripe(secretKey, { apiVersion: '2024-04-10' });
 };
 
@@ -65,7 +66,7 @@ const updateSubscriptionMethodFlow = ai.defineFlow(
     outputSchema: z.void(),
   },
   async ({ subscriptionId, collectionMethod }) => {
-    const stripe = getStripeInstance();
+    const stripe = await getStripeInstance();
     
     try {
         const updateParams: Stripe.SubscriptionUpdateParams = {
@@ -127,7 +128,7 @@ const cancelSubscriptionFlow = ai.defineFlow(
     }
 
     // Se for uma assinatura normal do Stripe, prossiga com a API do Stripe.
-    const stripe = getStripeInstance();
+    const stripe = await getStripeInstance();
     try {
       const existingSubscription = await stripe.subscriptions.retrieve(subscriptionId);
       if (existingSubscription.metadata.firebaseUserId !== userId) {
@@ -173,7 +174,7 @@ const changeSubscriptionPlanFlow = ai.defineFlow(
         outputSchema: z.any(),
     },
     async ({ subscriptionId, newPriceId }) => {
-        const stripe = getStripeInstance();
+        const stripe = await getStripeInstance();
         try {
             // Primeiro, recupere a assinatura para obter o ID do item de assinatura atual
             const subscription = await stripe.subscriptions.retrieve(subscriptionId);
