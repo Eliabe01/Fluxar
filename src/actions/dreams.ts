@@ -16,7 +16,7 @@ import {
 } from 'firebase/firestore';
 import { addTransaction } from '@/services/transactions';
 import type { Dream } from '@/services/dreams';
-import *d from 'zod';
+import { z } from 'zod';
 
 const dreamSchema = z.object({
   title: z.string().min(3, { message: 'O título deve ter pelo menos 3 caracteres.' }),
