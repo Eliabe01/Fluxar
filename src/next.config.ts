@@ -69,7 +69,6 @@ const nextConfig: NextConfig = {
     ],
   },
   webpack: (config, { isServer }) => {
-    config.experiments = { ...config.experiments, asyncWebAssembly: true };
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -81,6 +80,7 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
+  serverComponentsExternalPackages: ['firebase-admin'],
 };
 
 export default nextConfig;
