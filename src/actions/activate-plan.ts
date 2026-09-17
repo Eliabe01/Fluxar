@@ -2,7 +2,7 @@
 
 import { Timestamp } from 'firebase-admin/firestore';
 import { addDays } from 'date-fns';
-import { db as adminDb, auth as adminAuth } from '@/lib/firebase-admin';
+import { db as adminDb } from '@/lib/firebase-admin';
 
 export async function activatePixPlan(input: { plan: 'bronze' | 'prata' | 'ouro'; userId: string }): Promise<{ success: boolean; message: string }> {
     const { plan, userId } = input;
@@ -29,11 +29,11 @@ export async function activatePixPlan(input: { plan: 'bronze' | 'prata' | 'ouro'
             .doc(subscriptionId);
         await subscriptionDocRef.set(subscriptionData, { merge: true });
 
-        // 2. Definir custom claims no Firebase Auth
-        await adminAuth.setCustomUserClaims(userId, {
-            plan,
-            status: 'active',
-        });
+        // 2. Salvar plan no documento principal do usuário (sem custom claims)
+        await adminDb.collection('users').doc(userId).set(
+            { plan, planStatus: 'active', planExpiry: Timestamp.fromDate(endDate) },
+            { merge: true }
+        );
 
         console.log(`[Admin] Plano ${plan} ativado para usuário ${userId}.`);
         return { success: true, message: 'Plano ativado com sucesso por 30 dias!' };
