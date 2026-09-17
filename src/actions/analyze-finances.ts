@@ -87,42 +87,48 @@ Regras:
 - RETORNE APENAS O JSON, sem texto adicional.`;
 }
 
-export async function analyzeFinances(input: FinancialAnalysisInput): Promise<FinancialAnalysisOutput> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY não está configurada nas variáveis de ambiente.');
-  }
+export type AnalyzeFinancesResponse = 
+  | { success: true; data: FinancialAnalysisOutput }
+  | { success: false; error: string };
 
-  const prompt = buildPrompt(input);
-
-  const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        responseMimeType: 'application/json',
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Gemini API error:', errorText);
-    throw new Error(`Erro na API do Gemini: ${response.status} ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!text) {
-    throw new Error('A IA não retornou uma resposta válida.');
-  }
-
+export async function analyzeFinances(input: FinancialAnalysisInput): Promise<AnalyzeFinancesResponse> {
   try {
-    return JSON.parse(text) as FinancialAnalysisOutput;
-  } catch {
-    throw new Error('Não foi possível interpretar a resposta da IA. Tente novamente.');
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return { success: false, error: 'A chave da API Gemini não está configurada no servidor (GEMINI_API_KEY).' };
+    }
+
+    const prompt = buildPrompt(input);
+
+    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          responseMimeType: 'application/json',
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini API error:', errorText);
+      return { success: false, error: `Falha na API: ${response.status} ${response.statusText}` };
+    }
+
+    const data = await response.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!text) {
+      return { success: false, error: 'A Inteligência Artificial não retornou uma resposta válida.' };
+    }
+
+    const parsed = JSON.parse(text) as FinancialAnalysisOutput;
+    return { success: true, data: parsed };
+  } catch (error: any) {
+    console.error('Analyze finances catch error:', error);
+    return { success: false, error: error.message || 'Ocorreu um erro interno ao processar a análise.' };
   }
 }

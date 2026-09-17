@@ -86,13 +86,24 @@ export default function AnalysisPage() {
       }
 
       // Simplificar dados para a IA
-      const simplifiedTransactions = transactions.map(t => ({
-        type: t.type,
-        amount: t.amount,
-        category: t.category,
-        description: t.description,
-        date: (t.date as Date).toISOString().split('T')[0] // Enviar apenas a data
-      }));
+      const simplifiedTransactions = transactions.map(t => {
+        let isoDate = '';
+        if (t.date instanceof Date) {
+          isoDate = t.date.toISOString().split('T')[0];
+        } else if (t.date && typeof (t.date as any).toDate === 'function') {
+          isoDate = (t.date as any).toDate().toISOString().split('T')[0];
+        } else if (typeof t.date === 'string') {
+          isoDate = new Date(t.date).toISOString().split('T')[0];
+        }
+
+        return {
+          type: t.type,
+          amount: t.amount,
+          category: t.category,
+          description: t.description,
+          date: isoDate
+        };
+      });
       
       const userProfile = {
           riskProfile: riskProfile as 'conservative' | 'moderate' | 'aggressive',
@@ -100,7 +111,12 @@ export default function AnalysisPage() {
       }
 
       const result = await analyzeFinances({ transactions: simplifiedTransactions, budgets, userProfile });
-      setAnalysis(result);
+      
+      if (result.success) {
+        setAnalysis(result.data);
+      } else {
+        setError(result.error);
+      }
 
     } catch (e) {
       console.error(e);
