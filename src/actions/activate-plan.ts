@@ -2,7 +2,7 @@
 
 import { Timestamp } from 'firebase-admin/firestore';
 import { addDays } from 'date-fns';
-import { db as adminDb } from '@/lib/firebase-admin';
+import { db as adminDb, auth as adminAuth } from '@/lib/firebase-admin';
 
 export async function activatePixPlan(input: { plan: 'bronze' | 'prata' | 'ouro'; userId: string }): Promise<{ success: boolean; message: string }> {
     const { plan, userId } = input;
@@ -29,7 +29,13 @@ export async function activatePixPlan(input: { plan: 'bronze' | 'prata' | 'ouro'
             .doc(subscriptionId);
         await subscriptionDocRef.set(subscriptionData, { merge: true });
 
-        // 2. Salvar plan no documento principal do usuário (sem custom claims)
+        // 2. Atualizar custom claims no Firebase Auth (para atualizar o token JWT)
+        await adminAuth.setCustomUserClaims(userId, {
+            plan,
+            status: 'active',
+        });
+
+        // 3. Salvar plan no documento principal do usuário
         await adminDb.collection('users').doc(userId).set(
             { plan, planStatus: 'active', planExpiry: Timestamp.fromDate(endDate) },
             { merge: true }
