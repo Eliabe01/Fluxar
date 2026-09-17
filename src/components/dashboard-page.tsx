@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -9,10 +8,12 @@ import { FinancialReportChart } from "./dashboard/financial-report-chart";
 import { BudgetProgress } from "./dashboard/budget-progress";
 import { RecentTransactions } from "./dashboard/recent-transactions";
 import { AddTransactionDialog } from "@/components/add-transaction-dialog";
+import { BankAccountsList } from "./dashboard/bank-accounts-list";
 import { useAuth } from "@/lib/auth";
 import { db } from "@/lib/firebase";
 import { collection, query, onSnapshot, Timestamp } from "firebase/firestore";
 import type { Transaction } from "@/services/transactions";
+import { getBanks, type Bank } from "@/services/banks";
 import { cn } from "@/lib/utils";
 
 const formatCurrency = (value: number) => {
@@ -27,7 +28,22 @@ export function DashboardPage() {
   const [totalBalance, setTotalBalance] = useState(0);
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [monthlyExpenses, setMonthlyExpenses] = useState(0);
+  const [banks, setBanks] = useState<Bank[]>([]);
+  const [bankBalances, setBankBalances] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const unsubscribeBanks = getBanks(user.uid, (fetchedBanks) => {
+      setBanks(fetchedBanks);
+    });
+
+    return () => unsubscribeBanks();
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -45,6 +61,15 @@ export function DashboardPage() {
         let totalExpenses = 0;
         let currentMonthIncome = 0;
         let currentMonthExpenses = 0;
+        
+        // Inicializar saldos dos bancos com seus saldos iniciais
+        const currentBankBalances: Record<string, number> = {};
+        let initialBalancesTotal = 0;
+        
+        banks.forEach(bank => {
+          currentBankBalances[bank.id] = bank.initialBalance || 0;
+          initialBalancesTotal += (bank.initialBalance || 0);
+        });
 
         const now = new Date();
         const currentMonth = now.getMonth();
@@ -59,6 +84,9 @@ export function DashboardPage() {
 
           if (transaction.type === "income") {
             totalIncome += transaction.amount;
+            if (transaction.bankId && currentBankBalances[transaction.bankId] !== undefined) {
+              currentBankBalances[transaction.bankId] += transaction.amount;
+            }
             if (
               transactionDate.getMonth() === currentMonth &&
               transactionDate.getFullYear() === currentYear
@@ -68,6 +96,9 @@ export function DashboardPage() {
           } else {
             // 'expense'
             totalExpenses += transaction.amount;
+            if (transaction.bankId && currentBankBalances[transaction.bankId] !== undefined) {
+              currentBankBalances[transaction.bankId] -= transaction.amount;
+            }
             if (
               transactionDate.getMonth() === currentMonth &&
               transactionDate.getFullYear() === currentYear
@@ -77,7 +108,9 @@ export function DashboardPage() {
           }
         });
 
-        setTotalBalance(totalIncome - totalExpenses);
+        setBankBalances(currentBankBalances);
+        // Saldo total = (Soma dos saldos iniciais) + (Receitas - Despesas)
+        setTotalBalance(initialBalancesTotal + totalIncome - totalExpenses);
         setMonthlyIncome(currentMonthIncome);
         setMonthlyExpenses(currentMonthExpenses);
         setLoading(false);
@@ -89,7 +122,7 @@ export function DashboardPage() {
     );
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, banks]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -128,7 +161,9 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+      <BankAccountsList banks={banks} bankBalances={bankBalances} />
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5 mt-6">
         <div className="lg:col-span-3">
           <FinancialReportChart />
         </div>

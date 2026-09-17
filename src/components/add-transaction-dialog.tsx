@@ -38,6 +38,7 @@ import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from '@/hooks/use-toast';
 import { addTransaction, type NewTransaction } from '@/services/transactions';
+import { getBanks, type Bank } from '@/services/banks';
 import { useAuth } from '@/lib/auth';
 
 const transactionFormSchema = z.object({
@@ -54,6 +55,7 @@ const transactionFormSchema = z.object({
   description: z.string().min(2, {
     message: "A descrição deve ter pelo menos 2 caracteres.",
   }),
+  bankId: z.string().optional(),
 });
 
 type TransactionFormValues = z.infer<typeof transactionFormSchema>;
@@ -82,6 +84,7 @@ const incomeCategories = {
 export function AddTransactionDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [banks, setBanks] = useState<Bank[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -93,6 +96,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
       date: new Date(),
       category: "",
       amount: undefined,
+      bankId: undefined,
     },
   });
   
@@ -101,6 +105,14 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
   useEffect(() => {
     form.resetField('category');
   }, [transactionType, form]);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = getBanks(user.uid, (fetchedBanks) => {
+      setBanks(fetchedBanks);
+    });
+    return () => unsubscribe();
+  }, [user]);
 
   const categories = transactionType === 'income' ? incomeCategories : expenseCategories;
 
@@ -126,6 +138,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
         date: new Date(),
         category: "",
         amount: undefined,
+        bankId: undefined,
       });
       setOpen(false);
     } catch (error) {
@@ -148,6 +161,7 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
             date: new Date(),
             category: "",
             amount: undefined,
+            bankId: undefined,
           });
       }
   }
@@ -208,6 +222,31 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
                 </FormItem>
               )}
             />
+
+            {banks.length > 0 && (
+              <FormField
+                control={form.control}
+                name="bankId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Conta / Banco (opcional)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um banco" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {banks.map((bank) => (
+                          <SelectItem key={bank.id} value={bank.id}>{bank.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}
@@ -299,3 +338,4 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
     </Dialog>
   );
 }
+

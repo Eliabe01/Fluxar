@@ -8,6 +8,7 @@ export interface Transaction {
     category: string;
     description: string;
     date: Date | Timestamp;
+    bankId?: string;
 }
 
 export type NewTransaction = Omit<Transaction, 'id'>;
