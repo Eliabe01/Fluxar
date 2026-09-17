@@ -47,7 +47,7 @@ export interface FinancialAnalysisOutput {
 }
 
 const GEMINI_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 function buildPrompt(input: FinancialAnalysisInput): string {
   const riskLabels = { conservative: 'Conservador', moderate: 'Moderado', aggressive: 'Agressivo' };
