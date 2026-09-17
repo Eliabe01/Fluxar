@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { PlusCircle, Trash2, TrendingUp, TrendingDown, Wallet, ChevronRight, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { getBankInitials, getBankConfig } from "@/lib/banks-config";
 
 interface BankAccountsListProps {
   banks: Bank[];
@@ -25,6 +27,33 @@ const BANK_COLORS = [
   "from-amber-500 to-amber-700",
   "from-indigo-500 to-indigo-700",
 ];
+
+function BankIcon({ bank, className }: { bank: Bank; className?: string }) {
+  const [imgError, setImgError] = useState(false);
+  const logoUrl = bank.logoUrl || getBankConfig(bank.name)?.logoUrl;
+
+  if (logoUrl && !imgError) {
+    return (
+      <img
+        src={logoUrl}
+        alt={bank.name}
+        className={cn("rounded-lg object-contain bg-white p-0.5", className)}
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+
+  const initials = getBankInitials(bank.name);
+  const bgColor = bank.color || getBankConfig(bank.name)?.color || '#6366f1';
+  return (
+    <div
+      className={cn("rounded-lg flex items-center justify-center font-bold text-white text-xs", className)}
+      style={{ backgroundColor: bgColor }}
+    >
+      {initials}
+    </div>
+  );
+}
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -103,15 +132,20 @@ export function BankAccountsList({ banks, bankBalances }: BankAccountsListProps)
                 className="relative group overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer hover:-translate-y-0.5"
                 onClick={() => router.push(`/banks/${bank.id}`)}
               >
-                {/* Faixa colorida no topo */}
-                <div className={cn("h-1.5 w-full bg-gradient-to-r", colorClass)} />
+                {/* Faixa colorida no topo com a cor da marca */}
+                {(() => {
+                  const brandColor = bank.color || getBankConfig(bank.name)?.color;
+                  return brandColor ? (
+                    <div className="h-1.5 w-full" style={{ backgroundColor: brandColor }} />
+                  ) : (
+                    <div className={cn("h-1.5 w-full bg-gradient-to-r", colorClass)} />
+                  );
+                })()}
                 <CardContent className="p-5">
                   {/* Nome + botão deletar */}
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2">
-                      <div className={cn("p-1.5 rounded-md bg-gradient-to-br text-white shrink-0", colorClass)}>
-                        <Building2 className="w-3.5 h-3.5" />
-                      </div>
+                      <BankIcon bank={bank} className="w-9 h-9 shrink-0" />
                       <h3 className="font-semibold text-sm truncate max-w-[100px]" title={bank.name}>
                         {bank.name}
                       </h3>

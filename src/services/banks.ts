@@ -6,6 +6,7 @@ export interface Bank {
     name: string;
     initialBalance: number;
     color?: string;
+    logoUrl?: string;
     createdAt?: Date | Timestamp;
 }
 
