@@ -127,7 +127,16 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
     }
     setIsSaving(true);
     try {
-      await addTransaction(user.uid, data as NewTransaction);
+      // Remove bankId se não foi selecionado (Firestore não aceita undefined)
+      const transactionData: NewTransaction = {
+        type: data.type,
+        amount: data.amount,
+        category: data.category,
+        date: data.date,
+        description: data.description,
+        ...(data.bankId ? { bankId: data.bankId } : {}),
+      };
+      await addTransaction(user.uid, transactionData);
       toast({
         title: "Sucesso!",
         description: "Transação adicionada com sucesso.",
