@@ -109,8 +109,10 @@ export function DashboardPage() {
         });
 
         setBankBalances(currentBankBalances);
-        // Saldo total = (Soma dos saldos iniciais) + (Receitas - Despesas)
-        setTotalBalance(initialBalancesTotal + totalIncome - totalExpenses);
+        // Saldo Total = soma dos saldos de todos os bancos (quando existem bancos),
+        // ou receitas - despesas (quando não há bancos cadastrados)
+        const totalFromBanks = Object.values(currentBankBalances).reduce((s, v) => s + v, 0);
+        setTotalBalance(banks.length > 0 ? totalFromBanks : totalIncome - totalExpenses);
         setMonthlyIncome(currentMonthIncome);
         setMonthlyExpenses(currentMonthExpenses);
         setLoading(false);

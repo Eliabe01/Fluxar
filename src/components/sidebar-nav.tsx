@@ -7,6 +7,8 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarGroup,
+  SidebarGroupLabel,
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
@@ -23,87 +25,156 @@ import {
   Trophy,
   Landmark,
   Shield,
+  Wallet,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
-const navItems = [
-  { href: "/dashboard", label: "Painel", icon: LayoutDashboard, requiredPlan: "bronze" },
+const essentialItems = [
+  { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
   { href: "/transactions", label: "Gastos Diários", icon: ArrowRightLeft, requiredPlan: "bronze" },
   { href: "/bills", label: "Boletos", icon: Barcode, requiredPlan: "bronze" },
   { href: "/budgets", label: "Orçamentos", icon: Target, requiredPlan: "bronze" },
   { href: "/reports", label: "Relatórios", icon: BarChart3, requiredPlan: "bronze" },
+];
+
+const financeItems = [
   { href: "/fixed-income", label: "Ganhos Fixos", icon: CalendarClock, requiredPlan: "prata" },
   { href: "/extra-income", label: "Ganhos Extras", icon: Gift, requiredPlan: "prata" },
   { href: "/fixed-expenses", label: "Despesas Fixas", icon: Repeat, requiredPlan: "prata" },
   { href: "/installments", label: "Contas Parceladas", icon: CreditCard, requiredPlan: "prata" },
+];
+
+const planningItems = [
   { href: "/dreams", label: "Meus Sonhos", icon: Trophy, requiredPlan: "prata" },
   { href: "/analysis", label: "Análise Financeira", icon: Sparkles, requiredPlan: "prata" },
   { href: "/invest", label: "Investimentos", icon: Landmark, requiredPlan: "ouro" },
-  { href: "/settings", label: "Configurações", icon: Settings },
 ];
 
-const adminNavItem = { href: "/admin", label: "Admin", icon: Shield, admin: true };
-
 const planLevels: { [key: string]: number } = {
-  none: 0,
-  bronze: 1,
-  prata: 2,
-  ouro: 3,
+  none: 0, bronze: 1, prata: 2, ouro: 3,
 };
 
-export function SidebarNav() {
-  const pathname = usePathname();
-  const { user } = useAuth();
-  
-  const allNavItems = [...navItems, adminNavItem];
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  requiredPlan?: string;
+};
 
-  const userPlanLevel = planLevels[user?.plan || 'none'] || 0;
-
+function NavItemsList({ items, userPlanLevel, pathname }: { items: NavItem[]; userPlanLevel: number; pathname: string }) {
   return (
-    <SidebarMenu className="flex-1 p-2">
-      {allNavItems.map((item) => {
-        
-        // Verifica se o item é administrativo e se o usuário não é admin. Se for o caso, não renderiza.
-        if (item.admin && !user?.isAdmin) {
-          return null;
-        }
-        
+    <>
+      {items.map((item) => {
         let isDisabled = false;
         let tooltip = item.label;
 
-        // Se não for um item de admin, verifica as permissões de plano
-        if (!item.admin && 'requiredPlan' in item && item.requiredPlan) {
-            const requiredPlanLevel = planLevels[item.requiredPlan];
+        if (item.requiredPlan) {
+          const requiredLevel = planLevels[item.requiredPlan];
+          if (userPlanLevel < requiredLevel) {
+            isDisabled = true;
+            tooltip = `${item.label} (Plano ${item.requiredPlan} ou superior)`;
+          }
+        }
 
-            if (userPlanLevel < requiredPlanLevel) {
-                isDisabled = true;
-                tooltip = `${item.label} (Plano ${item.requiredPlan} ou superior)`;
-            }
-        }
-        
-        // Settings é um caso especial, sempre habilitado
-        if (item.href === "/settings") {
-            isDisabled = false;
-            tooltip = item.label;
-        }
+        const isActive = item.href === "/dashboard"
+          ? pathname === item.href
+          : pathname.startsWith(item.href);
 
         return (
           <SidebarMenuItem key={item.href}>
             <SidebarMenuButton
               asChild
-              isActive={item.href === '/dashboard' ? pathname === item.href : pathname.startsWith(item.href)}
+              isActive={isActive}
               tooltip={tooltip}
               disabled={isDisabled}
               aria-disabled={isDisabled}
             >
-              <Link href={isDisabled ? '#' : item.href} className={isDisabled ? 'pointer-events-none' : ''}>
-                <item.icon />
+              <Link href={isDisabled ? "#" : item.href} className={isDisabled ? "pointer-events-none" : ""}>
+                <item.icon className="w-4 h-4" />
                 <span>{item.label}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         );
       })}
-    </SidebarMenu>
+    </>
+  );
+}
+
+export function SidebarNav() {
+  const pathname = usePathname();
+  const { user } = useAuth();
+  const userPlanLevel = planLevels[user?.plan || "none"] || 0;
+
+  return (
+    <div className="flex flex-col gap-1 p-2 flex-1">
+      {/* Visão Geral */}
+      <SidebarGroup>
+        <SidebarGroupLabel>Visão Geral</SidebarGroupLabel>
+        <SidebarMenu>
+          <NavItemsList items={essentialItems} userPlanLevel={userPlanLevel} pathname={pathname} />
+        </SidebarMenu>
+      </SidebarGroup>
+
+      {/* Contas */}
+      <SidebarGroup>
+        <SidebarGroupLabel>Contas</SidebarGroupLabel>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={pathname.startsWith("/banks")}
+              tooltip="Minhas Contas"
+            >
+              <Link href="/dashboard">
+                <Wallet className="w-4 h-4" />
+                <span>Minhas Contas</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarGroup>
+
+      {/* Finanças */}
+      <SidebarGroup>
+        <SidebarGroupLabel>Finanças</SidebarGroupLabel>
+        <SidebarMenu>
+          <NavItemsList items={financeItems} userPlanLevel={userPlanLevel} pathname={pathname} />
+        </SidebarMenu>
+      </SidebarGroup>
+
+      {/* Planejamento */}
+      <SidebarGroup>
+        <SidebarGroupLabel>Planejamento</SidebarGroupLabel>
+        <SidebarMenu>
+          <NavItemsList items={planningItems} userPlanLevel={userPlanLevel} pathname={pathname} />
+        </SidebarMenu>
+      </SidebarGroup>
+
+      {/* Sistema */}
+      <SidebarGroup>
+        <SidebarGroupLabel>Sistema</SidebarGroupLabel>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={pathname === "/settings"} tooltip="Configurações">
+              <Link href="/settings">
+                <Settings className="w-4 h-4" />
+                <span>Configurações</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          {user?.isAdmin && (
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname === "/admin"} tooltip="Admin">
+                <Link href="/admin">
+                  <Shield className="w-4 h-4" />
+                  <span>Admin</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
+        </SidebarMenu>
+      </SidebarGroup>
+    </div>
   );
 }
