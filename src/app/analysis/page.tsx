@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Lightbulb, Loader2, Sparkles, ThumbsUp, AlertTriangle, Wallet, PieChart, TrendingUp } from 'lucide-react';
 import { getTransactionsForPeriod, type Transaction } from '@/services/transactions';
 import { getBudgets, type Budget } from '@/services/budgets';
-import { analyzeFinances, FinancialAnalysisOutput } from '@/ai/flows/financial-analyst-flow';
+import { analyzeFinances, type FinancialAnalysisOutput } from '@/actions/analyze-finances';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Label } from '@/components/ui/label';
@@ -35,8 +35,12 @@ const formatCurrency = (value: number) => {
 };
 
 export default function AnalysisPage() {
-  const { user, subscriptionStatus } = useAuth();
-  const isSubscriptionActive = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+  const { user, subscription } = useAuth();
+  // Considera ativo se tem assinatura ativa OU se tem um plano nas custom claims
+  const isSubscriptionActive =
+    subscription?.status === 'active' ||
+    subscription?.status === 'trialing' ||
+    (user?.plan && user.plan !== 'none');
 
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<FinancialAnalysisOutput | null>(null);

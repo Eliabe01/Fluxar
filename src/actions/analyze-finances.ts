@@ -1,0 +1,128 @@
+'use server';
+/**
+ * Analisa as finanças do usuário usando Gemini API diretamente (sem Genkit).
+ */
+
+export interface TransactionInput {
+  type: 'income' | 'expense';
+  amount: number;
+  category: string;
+  description: string;
+  date: string;
+}
+
+export interface BudgetInput {
+  category: string;
+  amount: number;
+  month: string;
+}
+
+export interface UserProfileInput {
+  riskProfile: 'conservative' | 'moderate' | 'aggressive';
+  investmentKnowledge: 'beginner' | 'intermediate' | 'advanced';
+}
+
+export interface FinancialAnalysisInput {
+  transactions: TransactionInput[];
+  budgets?: BudgetInput[];
+  userProfile: UserProfileInput;
+}
+
+export interface SuggestedBudget {
+  category: string;
+  suggestedAmount: number;
+}
+
+export interface InvestmentSuggestion {
+  title: string;
+  description: string;
+}
+
+export interface FinancialAnalysisOutput {
+  summary: string;
+  positivePoints: string[];
+  improvementPoints: string[];
+  suggestedBudget: SuggestedBudget[];
+  investmentSuggestions: InvestmentSuggestion[];
+}
+
+const GEMINI_API_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+
+function buildPrompt(input: FinancialAnalysisInput): string {
+  const riskLabels = { conservative: 'Conservador', moderate: 'Moderado', aggressive: 'Agressivo' };
+  const knowledgeLabels = { beginner: 'Iniciante', intermediate: 'Intermediário', advanced: 'Avançado' };
+
+  return `Você é um planejador financeiro de elite. Analise os dados abaixo e retorne APENAS um JSON válido (sem markdown, sem blocos de código).
+
+Transações do último mês:
+${JSON.stringify(input.transactions, null, 2)}
+
+Orçamentos definidos pelo usuário:
+${JSON.stringify(input.budgets || [], null, 2)}
+
+Perfil do usuário:
+- Perfil de Risco: ${riskLabels[input.userProfile.riskProfile]}
+- Conhecimento em Investimentos: ${knowledgeLabels[input.userProfile.investmentKnowledge]}
+
+Retorne um JSON com exatamente esta estrutura:
+{
+  "summary": "Resumo de 1-2 frases sobre a saúde financeira do mês.",
+  "positivePoints": ["Ponto positivo 1", "Ponto positivo 2"],
+  "improvementPoints": ["Sugestão de melhoria 1", "Sugestão de melhoria 2"],
+  "suggestedBudget": [
+    { "category": "Alimentação", "suggestedAmount": 500 },
+    { "category": "Transporte", "suggestedAmount": 200 }
+  ],
+  "investmentSuggestions": [
+    { "title": "Título da sugestão", "description": "Descrição da sugestão educacional." }
+  ]
+}
+
+Regras:
+- Use português do Brasil.
+- Seja específico e use os dados reais fornecidos.
+- Nunca prometa retornos financeiros.
+- Se não houver transações, explique isso no summary e retorne arrays vazios.
+- RETORNE APENAS O JSON, sem texto adicional.`;
+}
+
+export async function analyzeFinances(input: FinancialAnalysisInput): Promise<FinancialAnalysisOutput> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY não está configurada nas variáveis de ambiente.');
+  }
+
+  const prompt = buildPrompt(input);
+
+  const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        responseMimeType: 'application/json',
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Gemini API error:', errorText);
+    throw new Error(`Erro na API do Gemini: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+  if (!text) {
+    throw new Error('A IA não retornou uma resposta válida.');
+  }
+
+  try {
+    return JSON.parse(text) as FinancialAnalysisOutput;
+  } catch {
+    throw new Error('Não foi possível interpretar a resposta da IA. Tente novamente.');
+  }
+}
