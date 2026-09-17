@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ShieldAlert } from 'lucide-react';
-import { activatePixPlan } from '@/ai/flows/activate-pix-plan-flow';
+import { activatePixPlan } from '@/actions/activate-plan';
 import { FullScreenLoader } from '@/components/full-screen-loader';
 
 
