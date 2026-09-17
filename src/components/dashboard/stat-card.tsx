@@ -19,19 +19,29 @@ type StatCardProps = {
 
 export function StatCard({ title, value, icon, loading = false, valueClassName }: StatCardProps) {
   const Icon = iconMap[icon];
+  
+  const iconColor = icon === 'trending-up' ? 'text-success bg-success/10' : 
+                    icon === 'trending-down' ? 'text-destructive bg-destructive/10' : 
+                    'text-primary bg-primary/10';
+
   return (
-    <Card>
+    <Card className="border-border/40 card-shadow transition-all hover:-translate-y-0.5">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <CardTitle className="text-sm font-semibold text-muted-foreground">{title}</CardTitle>
+        <div className={cn("p-2 rounded-xl", iconColor)}>
+          <Icon className="h-5 w-5" />
+        </div>
       </CardHeader>
       <CardContent>
         {loading ? (
-          <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-10 w-3/4 mt-2" />
         ) : (
-          <div className={cn("text-2xl font-bold", valueClassName)}>{value}</div>
+          <div className={cn("text-3xl font-bold tracking-tight mt-1", valueClassName)}>
+            {value}
+          </div>
         )}
       </CardContent>
     </Card>
   );
 }
+

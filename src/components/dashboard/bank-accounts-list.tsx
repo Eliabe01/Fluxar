@@ -129,7 +129,7 @@ export function BankAccountsList({ banks, bankBalances }: BankAccountsListProps)
             return (
               <Card
                 key={bank.id}
-                className="relative group overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer hover:-translate-y-0.5"
+                className="relative group overflow-hidden border-border/40 card-shadow transition-all cursor-pointer hover:-translate-y-1 hover:shadow-lg hover:shadow-black/5"
                 onClick={() => router.push(`/banks/${bank.id}`)}
               >
                 {/* Faixa colorida no topo com a cor da marca */}

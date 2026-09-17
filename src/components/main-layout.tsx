@@ -88,14 +88,14 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between bg-background/60 px-4 backdrop-blur-md md:px-6 transition-all">
           <div className="flex items-center gap-4">
             <SidebarTrigger className="md:hidden" />
-            <h1 className="font-headline text-xl font-semibold">{pageTitle}</h1>
+            <h1 className="font-headline text-lg md:text-xl font-bold tracking-tight text-foreground/90">{pageTitle}</h1>
           </div>
           <UserNav />
         </header>
-        <main className="relative p-4 md:p-6 lg:p-8">
+        <main className="relative flex-1 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
             <SubscriptionOverlay />
             {children}
         </main>
