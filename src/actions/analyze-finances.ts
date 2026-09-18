@@ -115,7 +115,18 @@ export async function analyzeFinances(input: FinancialAnalysisInput): Promise<An
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Gemini API error:', errorText);
-      return { success: false, error: `Falha na API: ${response.status} ${response.statusText}` };
+      
+      let parsedError = errorText;
+      try {
+        const jsonError = JSON.parse(errorText);
+        if (jsonError.error && jsonError.error.message) {
+          parsedError = jsonError.error.message;
+        }
+      } catch (e) {
+        // ignora e usa o texto bruto
+      }
+      
+      return { success: false, error: `Falha na API Gemini (${response.status}): ${parsedError}` };
     }
 
     const data = await response.json();
