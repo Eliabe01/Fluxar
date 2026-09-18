@@ -14,8 +14,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
     
-    /* Primária: Roxo vibrante estilo Nubank */
-    --primary: 270 70% 50%;
+    /* Primária: Azul vibrante estilo Fintech */
+    --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
     
     /* Tons secundários mais suaves */
@@ -24,9 +24,9 @@
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
     
-    /* Accent para hover: roxo claro */
-    --accent: 270 70% 95%;
-    --accent-foreground: 270 70% 50%;
+    /* Accent para hover: azul claro */
+    --accent: 221 83% 95%;
+    --accent-foreground: 221 83% 53%;
     
     /* Cores de feedback */
     --destructive: 0 84% 60%;
@@ -37,7 +37,7 @@
     /* Bordas super sutis */
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 270 70% 50%;
+    --ring: 221 83% 53%;
     
     /* Arredondamento grande (1rem = 16px) */
     --radius: 1rem;
@@ -45,12 +45,12 @@
     /* Sidebar clara e flutuante */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 270 70% 50%;
+    --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 40% 96%;
     --sidebar-accent-foreground: 222 47% 11%;
     --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 270 70% 50%;
+    --sidebar-ring: 221 83% 53%;
 
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -66,30 +66,30 @@
     --card-foreground: 210 40% 98%;
     --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
-    --primary: 270 70% 60%;
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
     --secondary: 215 28% 17%;
     --secondary-foreground: 210 40% 98%;
     --muted: 215 28% 17%;
     --muted-foreground: 215 20% 65%;
-    --accent: 270 70% 25%;
-    --accent-foreground: 270 70% 85%;
+    --accent: 217 91% 25%;
+    --accent-foreground: 217 91% 85%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
     --success: 153 49% 32%;
     --success-foreground: 0 0% 98%;
     --border: 215 28% 17%;
     --input: 215 28% 17%;
-    --ring: 270 70% 60%;
+    --ring: 217 91% 60%;
     
     --sidebar-background: 222 47% 8%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 270 70% 60%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 215 28% 17%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 215 28% 17%;
-    --sidebar-ring: 270 70% 60%;
+    --sidebar-ring: 217 91% 60%;
   }
 }
 
