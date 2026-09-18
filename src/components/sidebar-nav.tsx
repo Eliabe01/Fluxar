@@ -88,12 +88,14 @@ function NavItemsList({ items, userPlanLevel, pathname }: { items: NavItem[]; us
               tooltip={tooltip}
               disabled={isDisabled}
               aria-disabled={isDisabled}
+              className="rounded-full transition-all duration-200 ease-in-out font-medium tracking-tight"
             >
               <Link href={isDisabled ? "#" : item.href} className={isDisabled ? "pointer-events-none" : ""}>
-                <item.icon className="w-4 h-4" />
-                <span>{item.label}</span>
+                <item.icon className="w-[18px] h-[18px]" />
+                <span className="text-[15px]">{item.label}</span>
               </Link>
             </SidebarMenuButton>
+
           </SidebarMenuItem>
         );
       })}
@@ -107,10 +109,10 @@ export function SidebarNav() {
   const userPlanLevel = planLevels[user?.plan || "none"] || 0;
 
   return (
-    <div className="flex flex-col gap-1 p-2 flex-1">
+    <div className="flex flex-col gap-2 p-3 flex-1">
       {/* Visão Geral */}
       <SidebarGroup>
-        <SidebarGroupLabel>Visão Geral</SidebarGroupLabel>
+        <SidebarGroupLabel className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Visão Geral</SidebarGroupLabel>
         <SidebarMenu>
           <NavItemsList items={essentialItems} userPlanLevel={userPlanLevel} pathname={pathname} />
         </SidebarMenu>
@@ -118,17 +120,18 @@ export function SidebarNav() {
 
       {/* Contas */}
       <SidebarGroup>
-        <SidebarGroupLabel>Contas</SidebarGroupLabel>
+        <SidebarGroupLabel className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Contas</SidebarGroupLabel>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
               isActive={pathname.startsWith("/banks")}
               tooltip="Minhas Contas"
+              className="rounded-full transition-all duration-200 ease-in-out font-medium tracking-tight"
             >
               <Link href="/dashboard">
-                <Wallet className="w-4 h-4" />
-                <span>Minhas Contas</span>
+                <Wallet className="w-[18px] h-[18px]" />
+                <span className="text-[15px]">Minhas Contas</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -137,7 +140,7 @@ export function SidebarNav() {
 
       {/* Finanças */}
       <SidebarGroup>
-        <SidebarGroupLabel>Finanças</SidebarGroupLabel>
+        <SidebarGroupLabel className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Finanças</SidebarGroupLabel>
         <SidebarMenu>
           <NavItemsList items={financeItems} userPlanLevel={userPlanLevel} pathname={pathname} />
         </SidebarMenu>
@@ -145,7 +148,7 @@ export function SidebarNav() {
 
       {/* Planejamento */}
       <SidebarGroup>
-        <SidebarGroupLabel>Planejamento</SidebarGroupLabel>
+        <SidebarGroupLabel className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Planejamento</SidebarGroupLabel>
         <SidebarMenu>
           <NavItemsList items={planningItems} userPlanLevel={userPlanLevel} pathname={pathname} />
         </SidebarMenu>
@@ -153,28 +156,29 @@ export function SidebarNav() {
 
       {/* Sistema */}
       <SidebarGroup>
-        <SidebarGroupLabel>Sistema</SidebarGroupLabel>
+        <SidebarGroupLabel className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Sistema</SidebarGroupLabel>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname === "/settings"} tooltip="Configurações">
+            <SidebarMenuButton asChild isActive={pathname === "/settings"} tooltip="Configurações" className="rounded-full transition-all duration-200 ease-in-out font-medium tracking-tight">
               <Link href="/settings">
-                <Settings className="w-4 h-4" />
-                <span>Configurações</span>
+                <Settings className="w-[18px] h-[18px]" />
+                <span className="text-[15px]">Configurações</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           {user?.isAdmin && (
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === "/admin"} tooltip="Admin">
+              <SidebarMenuButton asChild isActive={pathname === "/admin"} tooltip="Admin" className="rounded-full transition-all duration-200 ease-in-out font-medium tracking-tight">
                 <Link href="/admin">
-                  <Shield className="w-4 h-4" />
-                  <span>Admin</span>
+                  <Shield className="w-[18px] h-[18px]" />
+                  <span className="text-[15px]">Admin</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           )}
         </SidebarMenu>
       </SidebarGroup>
+
     </div>
   );
 }
