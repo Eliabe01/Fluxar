@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/lib/auth';
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Trash2, Edit } from "lucide-react";
+import { PlusCircle, Trash2, Edit, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddDreamDialog } from "@/components/add-dream-dialog";
@@ -27,6 +27,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Image from 'next/image';
 import { DreamProgressChart } from '@/components/dream-progress-chart';
+import { cn } from "@/lib/utils";
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("pt-BR", {
@@ -111,31 +112,41 @@ export default function DreamsPage() {
             ];
 
             return (
-              <Card key={dream.id} className="flex flex-col">
-                <CardHeader className="p-0">
+              <Card key={dream.id} className={cn(
+                  "flex flex-col relative overflow-hidden transition-all duration-500 border-border/40 card-shadow hover:-translate-y-1 hover:shadow-lg group",
+                  progress >= 100 && "border-amber-500/50 bg-gradient-to-br from-amber-500/10 via-background to-orange-500/5"
+              )}>
+                {progress >= 100 && (
+                  <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none z-0">
+                    <Sparkles className="w-24 h-24 text-amber-500" />
+                  </div>
+                )}
+                
+                <CardHeader className="p-0 z-10">
                   <div className="relative h-48 w-full">
                     <Image
                       src={dream.imageURL}
                       alt={dream.title}
                       layout="fill"
                       objectFit="cover"
-                      className="rounded-t-lg"
+                      className="rounded-t-2xl opacity-90 group-hover:opacity-100 transition-opacity"
                       data-ai-hint="dream goal"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
                   </div>
-                   <div className="p-4">
-                     <CardTitle className="flex justify-between items-start">
-                        <span className="flex-1 mr-2">{dream.title}</span>
-                        <div className="flex items-center gap-1 flex-shrink-0">
+                   <div className="p-5 relative -mt-8 z-10">
+                     <CardTitle className="flex justify-between items-start text-xl font-headline">
+                        <span className="flex-1 mr-2 line-clamp-2">{dream.title}</span>
+                        <div className="flex items-center gap-1 flex-shrink-0 bg-background/80 backdrop-blur rounded-full p-1 border shadow-sm">
                             <AddDreamDialog dream={dream}>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
-                                    <Edit className="h-4 w-4" />
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary rounded-full">
+                                    <Edit className="h-3 w-3" />
                                 </Button>
                             </AddDreamDialog>
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                                        <Trash2 className="h-4 w-4" />
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full">
+                                        <Trash2 className="h-3 w-3" />
                                     </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
@@ -145,27 +156,36 @@ export default function DreamsPage() {
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                        <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleDelete(dream.id)}>Excluir</AlertDialogAction>
+                                        <AlertDialogAction className="bg-destructive hover:bg-destructive/90 rounded-full" onClick={() => handleDelete(dream.id)}>Excluir</AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
                         </div>
                      </CardTitle>
-                     <CardDescription>
-                        Meta: {format(new Date(dream.dueDate.toDate()), "dd/MM/yyyy", { locale: ptBR })}
+                     <CardDescription className="mt-2 font-medium">
+                        Meta: {format(new Date(dream.dueDate.toDate()), "dd 'de' MMM, yyyy", { locale: ptBR })}
                      </CardDescription>
                    </div>
                 </CardHeader>
-                <CardContent className="flex-grow flex flex-col items-center justify-center space-y-4">
+                <CardContent className="flex-grow flex flex-col items-center justify-center space-y-2 z-10">
                     <DreamProgressChart data={chartData} progress={progress} />
-                    <div className="text-center">
-                        <p className="text-xl font-bold">{formatCurrency(dream.currentAmount)}</p>
-                        <p className="text-sm text-muted-foreground">de {formatCurrency(dream.targetAmount)}</p>
+                    <div className="text-center mt-4">
+                        <p className={cn("text-2xl font-bold tracking-tight", progress >= 100 ? "text-amber-500" : "text-foreground")}>
+                            {formatCurrency(dream.currentAmount)}
+                        </p>
+                        <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider mt-1">de {formatCurrency(dream.targetAmount)}</p>
                     </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="z-10 pb-5 px-5">
                   <ContributeToDreamDialog dream={dream}>
-                    <Button className="w-full">Contribuir</Button>
+                    <Button 
+                        className={cn("w-full rounded-xl h-12 text-base shadow-sm transition-all", 
+                            progress >= 100 ? "bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20" : ""
+                        )}
+                        disabled={progress >= 100}
+                    >
+                        {progress >= 100 ? "Sonho Realizado! 🎉" : "Contribuir"}
+                    </Button>
                   </ContributeToDreamDialog>
                 </CardFooter>
               </Card>

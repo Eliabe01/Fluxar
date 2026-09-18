@@ -19,20 +19,32 @@ export function DreamProgressChart({ data, progress }: DreamProgressChartProps) 
           cy={75}
           innerRadius={60}
           outerRadius={80}
-          paddingAngle={0}
+          paddingAngle={2}
           dataKey="value"
           startAngle={90}
-          endAngle={450}
+          endAngle={-270}
+          cornerRadius={10}
         >
           {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.fill} stroke={entry.fill} />
+             <Cell 
+               key={`cell-${index}`} 
+               fill={progress >= 100 && index === 0 ? 'hsl(45 93% 47%)' : entry.fill} // Dourado se estiver 100%
+               stroke="transparent"
+             />
           ))}
         </Pie>
       </PieChart>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-2xl font-bold text-foreground">
-          {`${Math.round(progress)}%`}
-        </span>
+      <div className="absolute inset-0 flex items-center justify-center -top-2 -left-2">
+         {progress >= 100 ? (
+            <div className="flex flex-col items-center justify-center animate-bounce duration-1000">
+               <span className="text-3xl">🏆</span>
+               <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mt-1">Concluído</span>
+            </div>
+         ) : (
+            <span className="text-2xl font-bold text-foreground font-headline tracking-tighter">
+              {`${Math.round(progress)}%`}
+            </span>
+         )}
       </div>
     </div>
   );
