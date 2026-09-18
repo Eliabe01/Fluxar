@@ -92,26 +92,26 @@ export function RecentTransactions() {
           ) : (
             transactions.map((t) => {
               const Icon = categoryIcons[t.category] || UtensilsCrossed;
-              const amountColor =
-                t.type === "income" ? "text-success" : "text-destructive";
-              const amountPrefix = t.type === "income" ? "+" : "-";
+              const isIncome = t.type === "income";
+              const amountColor = isIncome ? "text-success" : "text-foreground";
+              const amountPrefix = isIncome ? "+" : "-";
               return (
-                <div key={t.id} className="flex items-center">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      <Icon className="h-5 w-5" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="ml-4 space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {t.description}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDate(t.date)}
-                    </p>
+                <div key={t.id} className="flex items-center justify-between p-2 rounded-xl hover:bg-secondary/40 transition-colors">
+                  <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center shrink-0 shadow-sm border border-border/50 text-muted-foreground">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-foreground text-[14px] leading-tight">
+                          {t.description}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground mt-0.5">
+                          {formatDate(t.date)}
+                        </span>
+                      </div>
                   </div>
-                  <div className={cn("ml-auto font-medium", amountColor)}>
-                    {`${amountPrefix}R$ ${t.amount.toFixed(2)}`}
+                  <div className={cn("font-bold text-[14px]", amountColor)}>
+                    {`${amountPrefix} R$ ${t.amount.toFixed(2)}`}
                   </div>
                 </div>
               );

@@ -283,15 +283,85 @@ export function AddTransactionDialog({ children }: { children: React.ReactNode }
             <FormField
               control={form.control}
               name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição</FormLabel>
-                  <FormControl>
-                    <Input placeholder="ex: Café com amigos" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                // Efeito de Auto-Categorização (Smart Categorization)
+                const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+                  const val = e.target.value;
+                  field.onChange(e); // Mantém o comportamento original do React Hook Form
+
+                  const lowerVal = val.toLowerCase();
+                  
+                  // Mapeamento de palavras-chave inteligentes
+                  const keywords: Record<string, { type: 'income' | 'expense', category: string }> = {
+                    // Alimentação
+                    'ifood': { type: 'expense', category: 'food' },
+                    'mcdonald': { type: 'expense', category: 'food' },
+                    'mac': { type: 'expense', category: 'food' },
+                    'bk': { type: 'expense', category: 'food' },
+                    'pizza': { type: 'expense', category: 'food' },
+                    'padaria': { type: 'expense', category: 'food' },
+                    'mercado': { type: 'expense', category: 'food' },
+                    'supermercado': { type: 'expense', category: 'food' },
+                    'lanche': { type: 'expense', category: 'food' },
+                    'restaurante': { type: 'expense', category: 'food' },
+                    // Transporte
+                    'uber': { type: 'expense', category: 'transport' },
+                    '99': { type: 'expense', category: 'transport' },
+                    'indrive': { type: 'expense', category: 'transport' },
+                    'posto': { type: 'expense', category: 'transport' },
+                    'gasolina': { type: 'expense', category: 'transport' },
+                    'passagem': { type: 'expense', category: 'transport' },
+                    'onibus': { type: 'expense', category: 'transport' },
+                    // Contas
+                    'luz': { type: 'expense', category: 'bills' },
+                    'agua': { type: 'expense', category: 'bills' },
+                    'internet': { type: 'expense', category: 'bills' },
+                    'aluguel': { type: 'expense', category: 'housing' },
+                    'condominio': { type: 'expense', category: 'housing' },
+                    'celular': { type: 'expense', category: 'bills' },
+                    // Compras
+                    'shopee': { type: 'expense', category: 'shopping' },
+                    'shein': { type: 'expense', category: 'shopping' },
+                    'amazon': { type: 'expense', category: 'shopping' },
+                    'mercado livre': { type: 'expense', category: 'shopping' },
+                    'roupa': { type: 'expense', category: 'shopping' },
+                    // Saúde
+                    'farmacia': { type: 'expense', category: 'health' },
+                    'remedio': { type: 'expense', category: 'health' },
+                    'medico': { type: 'expense', category: 'health' },
+                    'consulta': { type: 'expense', category: 'health' },
+                    // Receitas
+                    'salario': { type: 'income', category: 'salary' },
+                    'pagamento': { type: 'income', category: 'salary' },
+                    'adiantamento': { type: 'income', category: 'salary' },
+                    'rendimento': { type: 'income', category: 'investment' },
+                  };
+
+                  // Procura se alguma palavra chave foi digitada inteira ou contida no texto
+                  for (const [key, mapping] of Object.entries(keywords)) {
+                    if (lowerVal.includes(key)) {
+                      const currentType = form.getValues('type');
+                      // Se o tipo sugerido for diferente, atualiza o tipo primeiro para não quebrar a lista de categorias
+                      if (currentType !== mapping.type) {
+                        form.setValue('type', mapping.type);
+                      }
+                      // Atualiza a categoria logo depois
+                      setTimeout(() => form.setValue('category', mapping.category), 0);
+                      break; // Aplica só a primeira que encontrar
+                    }
+                  }
+                };
+
+                return (
+                  <FormItem>
+                    <FormLabel>Descrição</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Corrida de Uber (auto-preenche Categoria)" {...field} onChange={handleChange} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
 
             <FormField

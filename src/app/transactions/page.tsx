@@ -140,61 +140,94 @@ export default function TransactionsPage() {
             <p className="text-muted-foreground">Nenhuma transação cadastrada.</p>
           </div>
         ) : (
-          <div className="border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Hora</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead className="w-[80px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell className="font-medium">{transaction.description}</TableCell>
-                    <TableCell>{categoryLabels[transaction.category] || transaction.category}</TableCell>
-                    <TableCell>{formatDate(transaction.date)}</TableCell>
-                    <TableCell>{formatTime(transaction.date)}</TableCell>
-                    <TableCell className={cn(
-                        "text-right font-medium",
-                        transaction.type === "income" ? "text-success" : "text-destructive"
-                    )}>
-                        {transaction.type === 'expense' ? '-' : '+'} {formatCurrency(transaction.amount)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                       <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                             <span className="sr-only">Excluir</span>
-                             <Trash2 className="h-4 w-4" />
-                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Essa ação não pode ser desfeita. Isso excluirá permanentemente esta transação.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              className="bg-destructive hover:bg-destructive/90"
-                              onClick={() => handleDelete(transaction.id)}>
-                              Excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <div className="space-y-8">
+            {Object.entries(
+              transactions.reduce((groups, transaction) => {
+                const dateKey = formatDate(transaction.date);
+                if (!groups[dateKey]) groups[dateKey] = [];
+                groups[dateKey].push(transaction);
+                return groups;
+              }, {} as Record<string, typeof transactions>)
+            ).map(([date, dailyTransactions]) => {
+              
+              // Verifica se a data é hoje ou ontem para mostrar label amigável
+              let dateLabel = date;
+              const today = format(new Date(), "dd/MM/yyyy", { locale: ptBR });
+              const yesterdayDate = new Date();
+              yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+              const yesterday = format(yesterdayDate, "dd/MM/yyyy", { locale: ptBR });
+              
+              if (date === today) dateLabel = "Hoje";
+              else if (date === yesterday) dateLabel = "Ontem";
+              else {
+                  // Converte "25/09/2026" para "25 de set"
+                  const [d, m] = date.split('/');
+                  const monthNames = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+                  dateLabel = `${d} de ${monthNames[parseInt(m) - 1]}`;
+              }
+
+              return (
+                <div key={date} className="space-y-4">
+                  <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase sticky top-[64px] bg-background/95 backdrop-blur z-10 py-2 border-b border-border/40">
+                    {dateLabel}
+                  </h3>
+                  <div className="space-y-3 px-1">
+                    {dailyTransactions.map((transaction) => {
+                        const isIncome = transaction.type === "income";
+                        
+                        // Ícones simples para categorias
+                        const iconMap: Record<string, string> = {
+                            food: "🍔", transport: "🚗", shopping: "🛍️", housing: "🏠", 
+                            bills: "🧾", leisure: "🍿", health: "💊", education: "📚", 
+                            salary: "💰", investment: "📈", gift: "🎁", extra: "✨", other: "📌"
+                        };
+                        const icon = iconMap[transaction.category] || "📌";
+
+                        return (
+                          <div key={transaction.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-secondary/40 transition-colors group">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-xl shrink-0 shadow-sm border border-border/50">
+                                    {icon}
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="font-semibold text-foreground text-[15px]">{transaction.description}</span>
+                                    <span className="text-xs text-muted-foreground">{categoryLabels[transaction.category] || transaction.category} • {formatTime(transaction.date)}</span>
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-4">
+                                <span className={cn("font-bold", isIncome ? "text-success" : "text-foreground")}>
+                                    {isIncome ? '+' : '-'} {formatCurrency(transaction.amount)}
+                                </span>
+                                
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                                        <span className="sr-only">Excluir</span>
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                      <AlertDialogDescription>Essa ação excluirá permanentemente esta transação.</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                      <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleDelete(transaction.id)}>
+                                        Excluir
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                          </div>
+                        );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </CardContent>
