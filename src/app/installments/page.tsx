@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
+import { cn } from "@/lib/utils";
 
 const brandIcons: { [key: string]: React.ElementType } = {
   mastercard: CreditCardIcon,
@@ -165,91 +166,117 @@ export default function InstallmentsPage() {
         </Card>
 
         {loading ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Skeleton className="h-48 w-full" />
-                <Skeleton className="h-48 w-full" />
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <Skeleton className="h-72 w-full rounded-2xl" />
+                <Skeleton className="h-72 w-full rounded-2xl" />
             </div>
         ) : cardSummaries.length === 0 ? (
             <div className="text-center py-10 border-2 border-dashed rounded-lg">
                 <p className="text-muted-foreground">Nenhum cartão cadastrado. Adicione uma conta parcelada para começar.</p>
             </div>
         ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
                 {cardSummaries.map((card) => {
                     const BrandIcon = brandIcons[card.brand] || CreditCardIcon;
+                    const isFaturaPaga = card.totalDue <= 0;
+                    
                     return (
-                        <Card key={card.id} className="flex flex-col">
-                            <CardHeader>
-                                <div className="flex items-start justify-between">
-                                    <div>
-                                        <CardTitle>{card.name}</CardTitle>
-                                        <CardDescription>{card.category}</CardDescription>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <BrandIcon className="h-6 w-6 text-muted-foreground" />
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        Essa ação não pode ser desfeita. Isso excluirá permanentemente o cartão "{card.name}" e todas as suas contas parceladas associadas.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                    <AlertDialogAction
-                                                        className="bg-destructive hover:bg-destructive/90"
-                                                        onClick={() => handleDeleteCard(card.id, card.name)}>
-                                                        Excluir
-                                                    </AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </div>
+                        <div key={card.id} className="relative flex flex-col pt-16">
+                            {/* O Cartão Físico Flutuante */}
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-11/12 h-44 rounded-xl bg-gradient-to-br from-slate-800 via-slate-900 to-black text-white p-5 flex flex-col justify-between shadow-2xl z-10 border border-slate-700/50 transition-transform hover:-translate-y-2">
+                                <div className="flex justify-between items-start">
+                                    {/* Chip do Cartão */}
+                                    <div className="w-10 h-8 rounded bg-gradient-to-br from-yellow-200 to-yellow-500 opacity-80" />
+                                    {/* Botão Excluir sutil */}
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-full -mt-2 -mr-2">
+                                                <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Isso excluirá permanentemente o cartão "{card.name}" e todas as suas contas associadas.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction className="bg-destructive" onClick={() => handleDeleteCard(card.id, card.name)}>Excluir</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
                                 </div>
-                            </CardHeader>
-                            <CardContent className="flex-grow">
-                                <p className="text-xs text-muted-foreground">Total da Fatura (Mês Atual)</p>
-                                <p className="text-2xl font-bold">{formatCurrency(card.totalDue)}</p>
-                                <p className="text-xs text-muted-foreground">{card.activeInstallments} compras ativas</p>
-                            </CardContent>
-                            <CardFooter className="flex flex-col items-stretch gap-2">
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button 
-                                            variant="outline"
-                                            disabled={card.totalDue <= 0 || isPaying === card.id}
-                                        >
-                                            {isPaying === card.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                            Pagar Fatura
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Confirmar Pagamento da Fatura</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                Você vai pagar <strong>{formatCurrency(card.totalDue)}</strong> referente à fatura do cartão <strong>{card.name}</strong>.
-                                                Um lançamento será criado em seus gastos diários. Deseja continuar?
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handlePayInvoice(card)}>
-                                                Confirmar Pagamento
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                                <Button asChild className="w-full">
-                                    <Link href={`/installments/${card.id}`}>Ver Detalhes</Link>
-                                </Button>
-                            </CardFooter>
-                        </Card>
+                                
+                                <div className="flex justify-between items-end">
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-slate-400 uppercase tracking-widest mb-1">{card.category}</span>
+                                        <span className="font-headline text-lg tracking-wider">{card.name}</span>
+                                    </div>
+                                    <BrandIcon className="h-8 w-8 text-slate-300 opacity-80" />
+                                </div>
+                            </div>
+
+                            {/* Resumo da Fatura (O Card Branco embaixo) */}
+                            <Card className="flex-1 pt-32 px-6 pb-6 border-border/40 card-shadow flex flex-col justify-between bg-card z-0">
+                                <div>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Fatura Atual</p>
+                                        <span className={cn(
+                                            "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full",
+                                            isFaturaPaga ? "bg-success/10 text-success" : "bg-amber-500/10 text-amber-600"
+                                        )}>
+                                            {isFaturaPaga ? 'Fechada/Paga' : 'Aberta'}
+                                        </span>
+                                    </div>
+                                    
+                                    <p className={cn(
+                                        "text-3xl font-headline tracking-tighter mb-1",
+                                        isFaturaPaga ? "text-success" : "text-primary"
+                                    )}>
+                                        {formatCurrency(card.totalDue)}
+                                    </p>
+                                    
+                                    <p className="text-xs text-muted-foreground mb-6">
+                                        {card.activeInstallments} compras parceladas ativas
+                                    </p>
+                                </div>
+
+                                <div className="flex flex-col gap-3 mt-auto">
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button 
+                                                className={cn("w-full rounded-xl transition-all shadow-sm", isFaturaPaga ? "opacity-50" : "bg-primary hover:bg-primary/90")}
+                                                disabled={isFaturaPaga || isPaying === card.id}
+                                            >
+                                                {isPaying === card.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                {isFaturaPaga ? "Fatura Paga" : "Pagar Fatura"}
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Confirmar Pagamento</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Você vai pagar <strong>{formatCurrency(card.totalDue)}</strong> referente à fatura do cartão <strong>{card.name}</strong>.
+                                                    Deseja continuar?
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handlePayInvoice(card)}>
+                                                    Confirmar
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+
+                                    <Button asChild variant="outline" className="w-full rounded-xl">
+                                        <Link href={`/installments/${card.id}`}>Ver Detalhes e Parcelas</Link>
+                                    </Button>
+                                </div>
+                            </Card>
+                        </div>
                     )
                 })}
             </div>
